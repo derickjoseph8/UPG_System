@@ -86,10 +86,8 @@ class VEReportingService:
         try:
             from savings_groups.models import BusinessSavingsGroup, SavingsRecord
             total_groups = BusinessSavingsGroup.objects.count()
-            savings_stats = SavingsRecord.objects.aggregate(
-                total=Coalesce(Sum('amount'), 0)
-            )
-            total_savings = float(savings_stats['total'] or 0)
+            savings_result = SavingsRecord.objects.aggregate(total=Sum('amount'))
+            total_savings = float(savings_result['total'] or 0)
         except Exception:
             total_groups = 0
             total_savings = 0
