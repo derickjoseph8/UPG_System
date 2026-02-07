@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-project-diagram"></i> {{ page_title }}</h1>
-    {% if user.is_superuser or user.role == 'county_executive' or user.role == 'ict_admin' %}
+    {% if user.is_superuser or user.role == 'county_executive' or user.role == 'ict_admin' or user.role == 'program_manager' %}
     <a href="{% url 'programs:program_create' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Create New Program
     </a>
@@ -87,7 +87,7 @@
             <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
             <h4 class="text-muted">No Programs Found</h4>
             <p class="text-muted">No programs match your search criteria.</p>
-            {% if user.is_superuser or user.role == 'county_executive' or user.role == 'ict_admin' %}
+            {% if user.is_superuser or user.role == 'county_executive' or user.role == 'ict_admin' or user.role == 'program_manager' %}
             <a href="{% url 'programs:program_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create Your First Program
             </a>
@@ -135,11 +135,20 @@
     </div>
     <div class="card-body">
         <div class="row">
+            {% if user.is_superuser or user.role == 'county_executive' or user.role == 'ict_admin' or user.role == 'program_manager' %}
             <div class="col-md-3 mb-2">
                 <a href="{% url 'programs:program_create' %}" class="btn btn-outline-primary w-100">
                     <i class="fas fa-plus"></i> Create Program
                 </a>
             </div>
+            {% endif %}
+            {% if user.role == 'field_associate' %}
+            <div class="col-md-3 mb-2">
+                <a href="{% url 'programs:my_notifications' %}" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-bell"></i> My Notifications
+                </a>
+            </div>
+            {% endif %}
             <div class="col-md-3 mb-2">
                 <a href="{% url 'programs:my_applications' %}" class="btn btn-outline-success w-100">
                     <i class="fas fa-list"></i> My Applications

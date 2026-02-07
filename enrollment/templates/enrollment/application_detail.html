@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Application {{ application.application_id }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-file-alt"></i> Application {{ application.application_id }}</h2>
+                    <p class="text-muted">{{ application.first_name }} {{ application.last_name }}</p>
+                </div>
+                <div>
+                    {% if application.status == 'submitted' %}
+                    <a href="{% url 'enrollment:application_screen' application.id %}" class="btn btn-warning">
+                        <i class="fas fa-check-circle"></i> Screen Application
+                    </a>
+                    {% elif application.status == 'approved' and not application.household %}
+                    <button class="btn btn-success" onclick="alert('Enroll functionality coming soon')">
+                        <i class="fas fa-user-check"></i> Enroll
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'enrollment:application_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Application Details -->
+        <div class="col-md-8">
+            <!-- Personal Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-user"></i> Personal Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>First Name:</strong> {{ application.first_name }}</p>
+                            <p><strong>Middle Name:</strong> {{ application.middle_name|default:"-" }}</p>
+                            <p><strong>Last Name:</strong> {{ application.last_name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>ID Number:</strong> {{ application.id_number }}</p>
+                            <p><strong>Phone Number:</strong> {{ application.phone_number }}</p>
+                            <p><strong>Village:</strong> {{ application.village.name|default:"-" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-project-diagram"></i> Program Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Program:</strong> {{ application.program.name|default:"-" }}</p>
+                    <p><strong>Status:</strong>
+                        {% if application.status == 'submitted' %}
+                            <span class="badge bg-info">{{ application.get_status_display }}</span>
+                        {% elif application.status == 'screening' %}
+                            <span class="badge bg-warning">{{ application.get_status_display }}</span>
+                        {% elif application.status == 'approved' %}
+                            <span class="badge bg-success">{{ application.get_status_display }}</span>
+                        {% elif application.status == 'enrolled' %}
+                            <span class="badge bg-success">{{ application.get_status_display }}</span>
+                        {% elif application.status == 'rejected' %}
+                            <span class="badge bg-danger">{{ application.get_status_display }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ application.get_status_display }}</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Current Step:</strong> {{ application.current_step|default:"-" }}</p>
+                    {% if application.household %}
+                    <p><strong>Linked Household:</strong>
+                        <a href="{% url 'households:household_detail' application.household.id %}">
+                            {{ application.household.name }}
+                        </a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Screening Information -->
+            {% if application.screening_score %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-clipboard-check"></i> Screening Results</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Score:</strong>
+                        <span class="badge {% if application.screening_passed %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ application.screening_score|floatformat:1 }}
+                        </span>
+                    </p>
+                    <p><strong>Passed:</strong>
+                        {% if application.screening_passed %}
+                            <span class="text-success"><i class="fas fa-check-circle"></i> Yes</span>
+                        {% else %}
+                            <span class="text-danger"><i class="fas fa-times-circle"></i> No</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Date:</strong> {{ application.screening_date|date:"Y-m-d H:i" }}</p>
+                    {% if application.screening_notes %}
+                    <p><strong>Notes:</strong><br>{{ application.screening_notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Validation Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-shield-alt"></i> Validation Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>ID Validated:</strong>
+                                {% if application.id_validated %}
+                                    <span class="text-success"><i class="fas fa-check-circle"></i> Yes</span>
+                                {% elif application.id_validated == False %}
+                                    <span class="text-danger"><i class="fas fa-times-circle"></i> No</span>
+                                {% else %}
+                                    <span class="text-muted">Pending</span>
+                                {% endif %}
+                            </p>
+                            {% if application.id_validation_date %}
+                            <p><strong>Validation Date:</strong> {{ application.id_validation_date|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Phone Validated:</strong>
+                                {% if application.phone_validated %}
+                                    <span class="text-success"><i class="fas fa-check-circle"></i> Yes</span>
+                                {% elif application.phone_validated == False %}
+                                    <span class="text-danger"><i class="fas fa-times-circle"></i> No</span>
+                                {% else %}
+                                    <span class="text-muted">Pending</span>
+                                {% endif %}
+                            </p>
+                            {% if application.phone_validation_date %}
+                            <p><strong>Validation Date:</strong> {{ application.phone_validation_date|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if application.poverty_score %}
+                    <hr>
+                    <p><strong>Poverty Score:</strong> {{ application.poverty_score|floatformat:1 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Approval Information -->
+            {% if application.approved is not None %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-gavel"></i> Approval Decision</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Decision:</strong>
+                        {% if application.approved %}
+                            <span class="badge bg-success">APPROVED</span>
+                        {% else %}
+                            <span class="badge bg-danger">REJECTED</span>
+                        {% endif %}
+                    </p>
+                    {% if application.approved_by %}
+                    <p><strong>Approved By:</strong> {{ application.approved_by.get_full_name }}</p>
+                    {% endif %}
+                    {% if application.approved_date %}
+                    <p><strong>Date:</strong> {{ application.approved_date|date:"Y-m-d H:i" }}</p>
+                    {% endif %}
+                    {% if application.rejection_reason %}
+                    <p><strong>Rejection Reason:</strong><br>{{ application.rejection_reason }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Verifications -->
+            {% if verifications %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-map-marker-alt"></i> Field Verifications</h5>
+                </div>
+                <div class="card-body">
+                    {% for verification in verifications %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <p><strong>Type:</strong> {{ verification.verification_type }}</p>
+                        <p><strong>Status:</strong>
+                            <span class="badge bg-{{ verification.status }}">{{ verification.get_status_display }}</span>
+                        </p>
+                        {% if verification.verified_by %}
+                        <p><strong>Verified By:</strong> {{ verification.verified_by.get_full_name }}</p>
+                        {% endif %}
+                        {% if verification.verification_date %}
+                        <p><strong>Date:</strong> {{ verification.verification_date|date:"Y-m-d H:i" }}</p>
+                        {% endif %}
+                        {% if verification.findings %}
+                        <p><strong>Findings:</strong><br>{{ verification.findings }}</p>
+                        {% endif %}
+                        {% if verification.latitude and verification.longitude %}
+                        <p><strong>Location:</strong> {{ verification.latitude }}, {{ verification.longitude }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Timeline & Actions -->
+        <div class="col-md-4">
+            <!-- Application Timeline -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <i class="fas fa-plus-circle text-primary"></i>
+                            <p><strong>Application Submitted</strong></p>
+                            <small>{{ application.created_at|date:"Y-m-d H:i" }}</small>
+                            {% if application.submitted_by %}
+                            <small class="d-block text-muted">By {{ application.submitted_by.get_full_name }}</small>
+                            {% endif %}
+                        </div>
+
+                        {% if application.screening_date %}
+                        <div class="timeline-item">
+                            <i class="fas fa-clipboard-check text-warning"></i>
+                            <p><strong>Screening Completed</strong></p>
+                            <small>{{ application.screening_date|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if application.id_validation_date %}
+                        <div class="timeline-item">
+                            <i class="fas fa-shield-alt text-info"></i>
+                            <p><strong>ID Validated</strong></p>
+                            <small>{{ application.id_validation_date|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if application.approved_date %}
+                        <div class="timeline-item">
+                            <i class="fas fa-gavel {% if application.approved %}text-success{% else %}text-danger{% endif %}"></i>
+                            <p><strong>{% if application.approved %}Approved{% else %}Rejected{% endif %}</strong></p>
+                            <small>{{ application.approved_date|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if application.status == 'submitted' %}
+                    <a href="{% url 'enrollment:application_screen' application.id %}"
+                       class="btn btn-warning btn-block w-100 mb-2">
+                        <i class="fas fa-check-circle"></i> Screen Application
+                    </a>
+                    {% endif %}
+
+                    {% if application.status == 'screening' or application.status == 'id_validation' %}
+                    <a href="{% url 'enrollment:application_approve' application.id %}"
+                       class="btn btn-success btn-block w-100 mb-2">
+                        <i class="fas fa-thumbs-up"></i> Approve/Reject
+                    </a>
+                    {% endif %}
+
+                    <button class="btn btn-outline-secondary btn-block w-100" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print Application
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 20px;
+}
+.timeline-item i {
+    position: absolute;
+    left: -11px;
+    background: white;
+    padding: 3px;
+}
+.timeline-item:last-child {
+    border-left: none;
+}
+</style>
+{% endblock %}

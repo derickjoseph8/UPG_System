@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Forms Dashboard - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-file-alt"></i> Dynamic Forms Dashboard</h2>
+                    <p class="text-muted">Manage and track form templates, assignments, and submissions</p>
+                </div>
+                <div>
+                    {% if can_create_forms %}
+                    <a href="{% url 'forms:template_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Form
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        {% if can_create_forms %}
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4>{{ total_templates|default:0 }}</h4>
+                    <small>Form Templates</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4>{{ active_assignments|default:0 }}</h4>
+                    <small>Active Assignments</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if can_fill_forms %}
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h4>{{ pending_forms|default:0 }}</h4>
+                    <small>Pending Forms</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Field Associate View - Form Assignments -->
+    {% if can_assign_to_mentors %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Forms Assigned to You</h5>
+                    <a href="{% url 'forms:fa_assignments_list' %}" class="btn btn-light btn-sm">
+                        View All <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if fa_assignments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Form Name</th>
+                                    <th>Status</th>
+                                    <th>Mentors Assigned</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in fa_assignments %}
+                                <tr>
+                                    <td>{{ assignment.form_template.name }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if assignment.form_template.status == 'active' %}success{% else %}warning{% endif %}">
+                                            {{ assignment.form_template.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ assignment.mentor_assignments.count }} mentors</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'forms:form_assign_mentors' assignment.form_template.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-user-plus"></i> Assign Mentors
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No forms assigned to you yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- M&E Staff / Admin View -->
+    {% if can_create_forms %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clipboard-list"></i> My Form Templates</h5>
+                </div>
+                <div class="card-body">
+                    {% if form_templates %}
+                    <div class="list-group">
+                        {% for template in form_templates %}
+                        <a href="{% url 'forms:template_builder' template.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ template.name }}</h6>
+                                    <small class="text-muted">{{ template.get_form_type_display }} - {{ template.fields.count }} fields</small>
+                                </div>
+                                <span class="badge bg-{% if template.status == 'active' %}success{% elif template.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                    {{ template.get_status_display }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    <a href="{% url 'forms:template_list' %}" class="btn btn-sm btn-outline-primary mt-3">View All Templates</a>
+                    {% else %}
+                    <p class="text-muted">No form templates created yet</p>
+                    <a href="{% url 'forms:template_create' %}" class="btn btn-primary">Create Your First Form</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tasks"></i> Recent Assignments</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_assignments %}
+                    <div class="list-group">
+                        {% for assignment in recent_assignments %}
+                        <a href="{% url 'forms:assignment_detail' assignment.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ assignment.form_template.name }}</h6>
+                                    <small class="text-muted">Assigned to: {{ assignment.assigned_to.get_full_name }}</small>
+                                </div>
+                                <span class="badge bg-{% if assignment.status == 'completed' %}success{% elif assignment.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+                                    {{ assignment.get_status_display }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No assignments yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mentor View -->
+    {% if can_fill_forms %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clipboard-check"></i> My Assigned Forms</h5>
+                </div>
+                <div class="card-body">
+                    {% if my_assignments or my_mentor_assignments %}
+                    <div class="list-group">
+                        {% for assignment in my_assignments %}
+                        <a href="{% url 'forms:fill_form' assignment.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ assignment.form_template.name }}</h6>
+                                    <small class="text-muted">
+                                        {% if assignment.household %}Household: {{ assignment.household.name }}{% endif %}
+                                        {% if assignment.due_date %} | Due: {{ assignment.due_date|date:"M d, Y" }}{% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge bg-{% if assignment.status == 'completed' %}success{% else %}warning{% endif %}">
+                                    {{ assignment.get_status_display }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+
+                        {% for mentor_assignment in my_mentor_assignments %}
+                        <a href="{% url 'forms:fill_form' mentor_assignment.form_assignment.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ mentor_assignment.form_assignment.form_template.name }}</h6>
+                                    <small class="text-muted">Assigned by FA: {{ mentor_assignment.assigned_by_fa.get_full_name }}</small>
+                                </div>
+                                <span class="badge bg-{% if mentor_assignment.status == 'completed' %}success{% else %}warning{% endif %}">
+                                    {{ mentor_assignment.get_status_display }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    <a href="{% url 'forms:my_assignments' %}" class="btn btn-sm btn-outline-primary mt-3">View All Assignments</a>
+                    {% else %}
+                    <p class="text-muted">No forms assigned to you yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if my_submissions %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle"></i> My Submissions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for submission in my_submissions %}
+                        <a href="{% url 'forms:submission_detail' submission.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ submission.form_template.name }}</h6>
+                                    <small class="text-muted">Submitted: {{ submission.submitted_at|date:"M d, Y H:i" }}</small>
+                                </div>
+                                <span class="badge bg-success">Completed</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- KoboToolbox Integration Info -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> KoboToolbox Integration</h5>
+                <p class="mb-0">
+                    Forms can be synced to KoboToolbox for offline data collection.
+                    {% if can_create_forms %}
+                    Enable sync when creating or editing forms to collect data using KoboCollect mobile app.
+                    <a href="{% url 'forms:kobo_webhook_logs' %}" class="alert-link">View Webhook Logs</a>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

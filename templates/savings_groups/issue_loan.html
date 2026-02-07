@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_list' %}">Savings Groups</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_group_detail' savings_group.pk %}">{{ savings_group.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:loan_list' savings_group.pk %}">Loans</a></li>
+            <li class="breadcrumb-item active">Record Loan</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-hand-holding-usd"></i> Record Loan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Available Group Savings:</strong> KES {{ savings_group.savings_to_date|floatformat:2 }}
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="member" class="form-label">Member <span class="text-danger">*</span></label>
+                            <select class="form-select" id="member" name="member" required>
+                                <option value="">-- Select Member --</option>
+                                {% for member in members %}
+                                <option value="{{ member.id }}">
+                                    {{ member.household }} (Current Savings: KES {{ member.total_savings|floatformat:2 }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="loan_amount" class="form-label">Loan Amount (KES) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="loan_amount" name="loan_amount" step="0.01" min="1" max="{{ savings_group.savings_to_date }}" required>
+                                    <small class="form-text text-muted">Maximum: KES {{ savings_group.savings_to_date|floatformat:2 }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="interest_rate" class="form-label">Interest Rate (%)</label>
+                                    <input type="number" class="form-control" id="interest_rate" name="interest_rate" step="0.1" min="0" max="100" value="10">
+                                    <small class="form-text text-muted">Default: 10%</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="loan_date" class="form-label">Loan Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="loan_date" name="loan_date" value="{% now 'Y-m-d' %}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="due_date" name="due_date" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="purpose" class="form-label">Purpose of Loan</label>
+                            <textarea class="form-control" id="purpose" name="purpose" rows="3" placeholder="Reason for taking the loan..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Additional notes..."></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Record Loan
+                            </button>
+                            <a href="{% url 'savings_groups:loan_list' savings_group.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Screen Application {{ application.application_id }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-clipboard-check"></i> Screen Application {{ application.application_id }}</h2>
+                    <p class="text-muted">{{ application.first_name }} {{ application.last_name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'enrollment:application_detail' application.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Application
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-user"></i> Applicant Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Name:</strong> {{ application.first_name }} {{ application.last_name }}</p>
+                            <p><strong>ID Number:</strong> {{ application.id_number }}</p>
+                            <p><strong>Phone:</strong> {{ application.phone_number }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Village:</strong> {{ application.village.name }}</p>
+                            <p><strong>Program:</strong> {{ application.program.name }}</p>
+                            <p><strong>Submitted:</strong> {{ application.created_at|date:"Y-m-d" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tasks"></i> Screening Form</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="screening_score" class="form-label">Screening Score <span class="text-danger">*</span></label>
+                            <input type="number" step="0.1" class="form-control" id="screening_score"
+                                   name="screening_score" required min="0" max="100">
+                            <small class="form-text text-muted">Enter score from 0 to 100 based on targeting criteria</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Screening Result <span class="text-danger">*</span></label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="screening_passed"
+                                       id="passed" value="true" required>
+                                <label class="form-check-label" for="passed">
+                                    <span class="text-success"><i class="fas fa-check-circle"></i> Passed Screening</span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="screening_passed"
+                                       id="failed" value="false" required>
+                                <label class="form-check-label" for="failed">
+                                    <span class="text-danger"><i class="fas fa-times-circle"></i> Failed Screening</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="screening_notes" class="form-label">Screening Notes</label>
+                            <textarea class="form-control" id="screening_notes" name="screening_notes"
+                                      rows="4" placeholder="Enter detailed screening notes..."></textarea>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Screening Results
+                            </button>
+                            <a href="{% url 'enrollment:application_detail' application.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            {% if targeting_rules %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-bullseye"></i> Targeting Criteria</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Evaluate the applicant against the following criteria:</p>
+                    {% for rule in targeting_rules %}
+                    <div class="mb-3 pb-2 border-bottom">
+                        <p class="mb-1"><strong>{{ rule.name }}</strong></p>
+                        <p class="small text-muted mb-1">{{ rule.description }}</p>
+                        <p class="small mb-0">
+                            <span class="badge bg-secondary">{{ rule.get_category_display }}</span>
+                            <span class="badge bg-info">{{ rule.score_on_pass }} points</span>
+                            {% if rule.is_mandatory %}
+                            <span class="badge bg-warning">Mandatory</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Screening Guidelines</h5>
+                </div>
+                <div class="card-body small">
+                    <h6>Scoring Guidelines:</h6>
+                    <ul>
+                        <li><strong>0-49:</strong> Does not meet criteria</li>
+                        <li><strong>50-69:</strong> Partially meets criteria</li>
+                        <li><strong>70-89:</strong> Meets criteria</li>
+                        <li><strong>90-100:</strong> Exceeds criteria</li>
+                    </ul>
+
+                    <h6 class="mt-3">What Happens Next:</h6>
+                    <ul>
+                        <li><strong>Pass:</strong> Application moves to ID validation</li>
+                        <li><strong>Fail:</strong> Application is rejected</li>
+                    </ul>
+
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="fas fa-lightbulb"></i>
+                        <strong>Tip:</strong> Review all targeting criteria carefully before scoring.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

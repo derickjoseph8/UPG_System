@@ -71,7 +71,7 @@
                                 {% for summary in member_summaries %}
                                 <tr>
                                     <td>{{ forloop.counter }}</td>
-                                    <td>{{ summary.member.household.name }}</td>
+                                    <td>{{ summary.member.household }}</td>
                                     <td>KES {{ summary.total_savings|floatformat:2 }}</td>
                                     <td>{{ summary.record_count }}</td>
                                     <td>
@@ -114,20 +114,57 @@
                                     <th>Amount</th>
                                     <th>Recorded By</th>
                                     <th>Notes</th>
+                                    <th>Status</th>
+                                    {% if user.is_superuser or user.role == 'program_manager' or user.role == 'ict_admin' %}
+                                    <th>Actions</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for record in savings_records|slice:":20" %}
-                                <tr>
+                                <tr {% if record.edited_by %}class="table-warning"{% endif %}>
                                     <td>{{ record.savings_date|date:"M d, Y" }}</td>
-                                    <td>{{ record.member.household.name }}</td>
+                                    <td>{{ record.member.household }}</td>
                                     <td>KES {{ record.amount|floatformat:2 }}</td>
-                                    <td>{{ record.recorded_by.get_full_name|default:"N/A" }}</td>
+                                    <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username|default:"N/A" }}</td>
                                     <td>{{ record.notes|default:"-" }}</td>
+                                    <td>
+                                        {% if record.edited_by %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-edit"></i> Edited
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success">Original</span>
+                                        {% endif %}
+                                    </td>
+                                    {% if user.is_superuser or user.role == 'program_manager' or user.role == 'ict_admin' %}
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'savings_groups:edit_savings_record' savings_group.pk record.pk %}" class="btn btn-outline-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'savings_groups:delete_savings_record' savings_group.pk record.pk %}" class="btn btn-outline-danger" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    {% endif %}
                                 </tr>
+                                {% if record.edited_by %}
+                                <tr class="table-light">
+                                    <td colspan="{% if user.is_superuser or user.role == 'program_manager' or user.role == 'ict_admin' %}7{% else %}6{% endif %}" class="small py-1 ps-4">
+                                        <i class="fas fa-history text-warning me-1"></i>
+                                        <strong>Edited by:</strong> {{ record.edited_by.get_full_name|default:record.edited_by.username }}
+                                        <strong class="ms-2">on:</strong> {{ record.edited_at|date:"M d, Y" }} at {{ record.edited_at|time:"H:i" }}
+                                        {% if record.edit_history %}
+                                        <br><span class="text-muted ms-3">{{ record.edit_history|linebreaksbr }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No savings records found</td>
+                                    <td colspan="{% if user.is_superuser or user.role == 'program_manager' or user.role == 'ict_admin' %}7{% else %}6{% endif %}" class="text-center text-muted">No savings records found</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

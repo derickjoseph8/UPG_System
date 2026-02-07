@@ -11,7 +11,7 @@
 <!-- M&E Notice -->
 <div class="alert alert-info mb-4">
     <i class="fas fa-info-circle me-2"></i>
-    <strong>M&E Dashboard:</strong> Monitor program activities, mentor performance, and generate evaluation reports.
+    <strong>M&E Dashboard:</strong> Monitor program activities, mentor performance, data quality, and generate evaluation reports.
 </div>
 
 <!-- Key Metrics -->
@@ -25,63 +25,105 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <h4>{{ stats.household_visits }}</h4>
-                <small>Visits (30 Days)</small>
+        <a href="{% url 'dashboard:activity_logs' %}?type=visits" class="text-decoration-none">
+            <div class="card bg-success text-white" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <h4>{{ stats.household_visits }}</h4>
+                    <small>Visits This Month</small>
+                    <br><small><i class="fas fa-external-link-alt"></i> Click to view</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'dashboard:activity_logs' %}?type=calls" class="text-decoration-none">
+            <div class="card bg-info text-white" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <h4>{{ stats.phone_nudges }}</h4>
+                    <small>Phone Nudges This Month</small>
+                    <br><small><i class="fas fa-external-link-alt"></i> Click to view</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'dashboard:activity_logs' %}" class="text-decoration-none">
+            <div class="card bg-warning text-white" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <h4>{{ stats.total_mentor_activities }}</h4>
+                    <small>Total Mentor Activities</small>
+                    <br><small><i class="fas fa-external-link-alt"></i> Click to view</small>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Charts Row (NEW - Borrowed from UPG Kaduna MIS) -->
+<div class="row mb-4">
+    <!-- Enrollment Trend Chart -->
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Enrollment Trend (Last 6 Months)</h5>
+            </div>
+            <div class="card-body">
+                {% include 'includes/charts/line_chart.html' with chart_id='meEnrollmentChart' labels=enrollment_trend.labels values=enrollment_trend.values dataset_label='Cumulative Households' height=250 %}
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-white">
-            <div class="card-body text-center">
-                <h4>{{ stats.phone_nudges }}</h4>
-                <small>Phone Nudges (30 Days)</small>
+
+    <!-- Status Distribution Chart -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Participation Status</h5>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body text-center">
-                <h4>{{ stats.total_mentor_activities }}</h4>
-                <small>Total Mentor Activities</small>
+            <div class="card-body">
+                {% include 'includes/charts/doughnut_chart.html' with chart_id='meStatusChart' labels=status_distribution.labels values=status_distribution.values bg_colors=status_distribution.colors height=220 %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Activity Summary -->
+<!-- Data Quality & Recent Activity Row -->
 <div class="row mb-4">
+    <!-- Data Quality Widget (NEW - Borrowed from UPG Kaduna MIS) -->
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-chart-bar"></i> Recent Activity (7 Days)</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-sm-6">
-                        <p><strong>Recent Visits:</strong> {{ stats.recent_visits }}</p>
-                    </div>
-                    <div class="col-sm-6">
-                        <p><strong>Recent Calls:</strong> {{ stats.recent_calls }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {% include 'includes/data_quality_widget.html' with quality=data_quality %}
     </div>
 
+    <!-- Recent Activity Summary -->
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-clipboard-check"></i> Reporting Summary</h5>
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Recent Activity (7 Days)</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-sm-6">
-                        <p><strong>Pending Reports:</strong> {{ stats.pending_reports }}</p>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center bg-success bg-opacity-10">
+                            <h3 class="text-success mb-1">{{ stats.recent_visits }}</h3>
+                            <small class="text-muted">Recent Visits</small>
+                        </div>
                     </div>
-                    <div class="col-sm-6">
-                        <p><strong>Training Completion:</strong> {{ stats.training_completion_rate }}%</p>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center bg-info bg-opacity-10">
+                            <h3 class="text-info mb-1">{{ stats.recent_calls }}</h3>
+                            <small class="text-muted">Recent Calls</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center">
+                            <h3 class="text-primary mb-1">{{ stats.pending_reports }}</h3>
+                            <small class="text-muted">Pending Reports</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center">
+                            <h3 class="text-warning mb-1">{{ stats.training_completion_rate }}%</h3>
+                            <small class="text-muted">Training Completion</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,9 +134,9 @@
 <!-- Mentor Performance Overview -->
 <div class="row mb-4">
     <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-users"></i> Top Mentor Performance (Last 30 Days)</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Top Mentor Performance (Last 30 Days)</h5>
             </div>
             <div class="card-body">
                 {% if mentor_activity %}
@@ -106,6 +148,7 @@
                                 <th>Visits</th>
                                 <th>Phone Calls</th>
                                 <th>Total Activities</th>
+                                <th>Performance</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -115,6 +158,15 @@
                                 <td><span class="badge bg-success">{{ activity.visits }}</span></td>
                                 <td><span class="badge bg-info">{{ activity.calls }}</span></td>
                                 <td><strong>{{ activity.total }}</strong></td>
+                                <td>
+                                    {% if activity.total >= 20 %}
+                                    <span class="badge bg-success">Excellent</span>
+                                    {% elif activity.total >= 10 %}
+                                    <span class="badge bg-warning text-dark">Good</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Needs Improvement</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -131,18 +183,18 @@
 <!-- Recent Activities -->
 <div class="row mb-4">
     <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-home"></i> Recent Household Visits</h5>
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-home me-2"></i>Recent Household Visits</h5>
             </div>
             <div class="card-body">
                 {% if recent_visits %}
-                <div class="list-group">
+                <div class="list-group list-group-flush">
                     {% for visit in recent_visits %}
-                    <div class="list-group-item">
+                    <div class="list-group-item px-0">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">{{ visit.household.name }}</h6>
-                            <small>{{ visit.visit_date|date:"M d, Y" }}</small>
+                            <small class="text-muted">{{ visit.visit_date|date:"M d, Y" }}</small>
                         </div>
                         <p class="mb-1"><small>{{ visit.topic }}</small></p>
                         <small class="text-muted">By: {{ visit.mentor.get_full_name|default:visit.mentor.username }}</small>
@@ -157,18 +209,18 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-phone"></i> Recent Phone Nudges</h5>
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-phone me-2"></i>Recent Phone Nudges</h5>
             </div>
             <div class="card-body">
                 {% if recent_calls %}
-                <div class="list-group">
+                <div class="list-group list-group-flush">
                     {% for call in recent_calls %}
-                    <div class="list-group-item">
+                    <div class="list-group-item px-0">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">{{ call.household.name }}</h6>
-                            <small>{{ call.call_date|date:"M d, Y" }}</small>
+                            <small class="text-muted">{{ call.call_date|date:"M d, Y" }}</small>
                         </div>
                         <p class="mb-1"><small>{{ call.get_nudge_type_display }}</small></p>
                         <small class="text-muted">By: {{ call.mentor.get_full_name|default:call.mentor.username }} - {{ call.duration_minutes }} min</small>
@@ -186,30 +238,30 @@
 <!-- Quick Actions -->
 <div class="row">
     <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
                         <a href="{% url 'training:mentoring_reports' %}" class="btn btn-primary w-100 mb-2">
-                            <i class="fas fa-file-alt"></i> View All Reports
+                            <i class="fas fa-file-alt me-1"></i> View All Reports
                         </a>
                     </div>
                     <div class="col-md-3">
                         <a href="{% url 'training:mentoring_analytics' %}" class="btn btn-info w-100 mb-2">
-                            <i class="fas fa-chart-pie"></i> Analytics
+                            <i class="fas fa-chart-pie me-1"></i> Analytics
                         </a>
                     </div>
                     <div class="col-md-3">
                         <a href="{% url 'training:visit_list' %}" class="btn btn-success w-100 mb-2">
-                            <i class="fas fa-list"></i> All Visits
+                            <i class="fas fa-list me-1"></i> All Visits
                         </a>
                     </div>
                     <div class="col-md-3">
                         <a href="{% url 'training:phone_nudge_list' %}" class="btn btn-warning w-100 mb-2">
-                            <i class="fas fa-phone-alt"></i> All Phone Nudges
+                            <i class="fas fa-phone-alt me-1"></i> All Phone Nudges
                         </a>
                     </div>
                 </div>

@@ -71,20 +71,29 @@
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-light">
         <div class="row align-items-center">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <h6 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Select Training Date</h6>
+                <small class="text-muted">Select a past date to mark retroactive attendance</small>
             </div>
-            <div class="col-md-6">
-                <form method="get" class="d-flex gap-2">
-                    <select class="form-select form-select-sm" id="date-selector" name="date" onchange="this.form.submit()">
+            <div class="col-md-8">
+                <form method="get" class="d-flex gap-2 align-items-center">
+                    <!-- Dropdown for existing training dates -->
+                    <select class="form-select form-select-sm" id="date-selector" name="date" style="max-width: 250px;">
                         {% for date in training_dates %}
                         <option value="{{ date|date:'Y-m-d' }}" {% if date == selected_date %}selected{% endif %}>
                             {{ date|date:"l, F d, Y" }}
-                            {% if date == selected_date %} (Today's View){% endif %}
                         </option>
                         {% endfor %}
+                        <option value="custom">-- Enter Custom Date --</option>
                     </select>
-                    <a href="?date={{ selected_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary">
+                    <!-- Custom date input (hidden by default) -->
+                    <input type="date" class="form-control form-control-sm" id="custom-date-input"
+                           name="custom_date" style="display: none; max-width: 180px;"
+                           value="{{ selected_date|date:'Y-m-d' }}">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-calendar-check"></i> Go
+                    </button>
+                    <a href="?date={{ selected_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary" title="Refresh">
                         <i class="fas fa-sync"></i>
                     </a>
                 </form>
@@ -264,31 +273,48 @@
         </div>
         {% endif %}
 
-        <!-- Household Selection Form (Hidden by default) -->
+        <!-- Household Selection Form (Hidden by default) - BULK SELECT -->
         <div class="card mt-3" id="household-selection-form" style="display: none;">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Household to Training</h6>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Add Participants to Training</h6>
+                <span class="badge bg-info" id="selected-count">0 selected</span>
             </div>
             <div class="card-body">
                 <form id="add-household-form">
                     {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-8">
-                            <label for="household-select" class="form-label">Select Household</label>
-                            <select class="form-select" id="household-select" name="household_id" required>
-                                <option value="">Choose a household...</option>
-                                <!-- Options will be loaded via AJAX -->
-                            </select>
-                        </div>
-                        <div class="col-md-4">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
                             <label for="attendance-date" class="form-label">Training Date</label>
                             <input type="date" class="form-control" id="attendance-date" name="training_date"
                                    value="{{ selected_date|date:'Y-m-d' }}" required>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Search Households</label>
+                            <input type="text" class="form-control" id="household-search" placeholder="Type to filter...">
+                        </div>
                     </div>
+
+                    <!-- Select All / Deselect All -->
+                    <div class="mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-btn">
+                            <i class="fas fa-check-double"></i> Select All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="deselect-all-btn">
+                            <i class="fas fa-times"></i> Deselect All
+                        </button>
+                        <span class="ms-3 text-muted small">Available slots: <strong id="available-slots">{{ training.available_slots }}</strong></span>
+                    </div>
+
+                    <!-- Household Checkboxes Container -->
+                    <div id="household-checkboxes" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                        <div class="text-center py-3 text-muted">
+                            <i class="fas fa-spinner fa-spin"></i> Loading available households...
+                        </div>
+                    </div>
+
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary" id="submit-add-household">
-                            <i class="fas fa-plus"></i> Add to Training
+                            <i class="fas fa-plus"></i> Add Selected (<span id="submit-count">0</span>)
                         </button>
                         <button type="button" class="btn btn-secondary" id="cancel-add-household">
                             Cancel
@@ -308,7 +334,7 @@
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-outline-success" id="save-attendance">
-                        <i class="fas fa-save"></i> Save All Changes
+                        <i class="fas fa-check-circle"></i> Changes Auto-Save
                     </button>
                     <a href="{% url 'training:edit_training' training.id %}" class="btn btn-outline-primary">
                         <i class="fas fa-edit"></i> Edit Training Details
@@ -473,36 +499,76 @@ function loadAvailableHouseholds() {
         dataType: 'json',
         success: function(data) {
             console.log('Received household data:', data);
-            const select = $('#household-select');
-            select.empty();
-            select.append('<option value="">Choose a household...</option>');
+            const container = $('#household-checkboxes');
+            container.empty();
 
             if (data.success && data.households) {
                 if (data.households.length === 0) {
-                    select.append('<option value="">No households available</option>');
+                    container.html('<div class="text-center py-3 text-muted">No available households to add</div>');
                     console.log('No households available');
                 } else {
-                    data.households.forEach(function(household) {
-                        select.append(`<option value="${household.id}">${household.name} - ${household.village}</option>`);
-                    });
-                    console.log('Added', data.households.length, 'households to dropdown');
+                    // Store households globally for search filtering
+                    window.availableHouseholds = data.households;
+
+                    // Render checkboxes
+                    renderHouseholdCheckboxes(data.households);
+                    console.log('Added', data.households.length, 'households as checkboxes');
                 }
             } else {
                 console.error('Failed to load households:', data);
-                select.append('<option value="">Error loading households</option>');
-                alert('Failed to load households: ' + (data.message || 'Unknown error'));
+                container.html('<div class="text-danger">Error loading households</div>');
             }
         },
         error: function(xhr, status, error) {
             console.error('AJAX error loading households:', status, error);
-            console.error('Response:', xhr.responseText);
-            console.error('Status code:', xhr.status);
-            const select = $('#household-select');
-            select.empty();
-            select.append('<option value="">Error loading households</option>');
-            alert('Error loading households: ' + error + '\nStatus: ' + xhr.status);
+            const container = $('#household-checkboxes');
+            container.html('<div class="text-danger">Error loading households: ' + error + '</div>');
         }
     });
+}
+
+// Render household checkboxes
+function renderHouseholdCheckboxes(households) {
+    const container = $('#household-checkboxes');
+    container.empty();
+
+    if (households.length === 0) {
+        container.html('<div class="text-center py-3 text-muted">No matching households</div>');
+        return;
+    }
+
+    // Group by village
+    const byVillage = {};
+    households.forEach(function(h) {
+        if (!byVillage[h.village]) byVillage[h.village] = [];
+        byVillage[h.village].push(h);
+    });
+
+    // Render grouped checkboxes
+    Object.keys(byVillage).sort().forEach(function(village) {
+        container.append(`<div class="fw-bold text-primary mt-2 mb-1">${village}</div>`);
+        byVillage[village].forEach(function(household) {
+            container.append(`
+                <div class="form-check">
+                    <input class="form-check-input household-checkbox" type="checkbox"
+                           name="household_ids[]" value="${household.id}" id="hh-${household.id}">
+                    <label class="form-check-label" for="hh-${household.id}">
+                        ${household.name}
+                        ${household.phone ? '<small class="text-muted">(' + household.phone + ')</small>' : ''}
+                    </label>
+                </div>
+            `);
+        });
+    });
+
+    updateSelectedCount();
+}
+
+// Update selected count
+function updateSelectedCount() {
+    const count = $('.household-checkbox:checked').length;
+    $('#selected-count').text(count + ' selected');
+    $('#submit-count').text(count);
 }
 
 $(document).ready(function() {
@@ -510,6 +576,31 @@ $(document).ready(function() {
     console.log('jQuery version:', $.fn.jquery);
     console.log('Add first household button found:', $('#add-first-household-btn').length);
     console.log('Add household button found:', $('#add-household-btn').length);
+
+    // Handle custom date selector
+    $('#date-selector').change(function() {
+        if ($(this).val() === 'custom') {
+            $('#custom-date-input').show().focus();
+            $(this).attr('name', ''); // Remove name so it doesn't conflict
+        } else {
+            $('#custom-date-input').hide();
+            $(this).attr('name', 'date');
+        }
+    });
+
+    // Handle form submission with custom date
+    $('#date-selector').closest('form').on('submit', function(e) {
+        if ($('#date-selector').val() === 'custom') {
+            const customDate = $('#custom-date-input').val();
+            if (!customDate) {
+                e.preventDefault();
+                alert('Please select a date');
+                return false;
+            }
+            // Set the date parameter from custom input
+            $('#custom-date-input').attr('name', 'date');
+        }
+    });
 
     // Use event delegation to ensure buttons work even if dynamically added
     $(document).on('click', '#add-first-household-btn, #add-household-btn', function() {
@@ -552,82 +643,207 @@ $(document).ready(function() {
     });
 
 
-    // Add household to training
+    // Select All button
+    $('#select-all-btn').click(function() {
+        $('.household-checkbox:visible').prop('checked', true);
+        updateSelectedCount();
+    });
+
+    // Deselect All button
+    $('#deselect-all-btn').click(function() {
+        $('.household-checkbox').prop('checked', false);
+        updateSelectedCount();
+    });
+
+    // Update count when checkboxes change
+    $(document).on('change', '.household-checkbox', function() {
+        updateSelectedCount();
+    });
+
+    // Search/filter households
+    $('#household-search').on('input', function() {
+        const query = $(this).val().toLowerCase();
+        if (window.availableHouseholds) {
+            const filtered = window.availableHouseholds.filter(function(h) {
+                return h.name.toLowerCase().includes(query) ||
+                       h.village.toLowerCase().includes(query) ||
+                       (h.phone && h.phone.includes(query));
+            });
+            renderHouseholdCheckboxes(filtered);
+        }
+    });
+
+    // Add households to training (bulk)
     $('#add-household-form').submit(function(e) {
         e.preventDefault();
         console.log('Form submitted');
 
-        const formData = $(this).serialize();
-        console.log('Form data:', formData);
+        const selectedIds = $('.household-checkbox:checked').map(function() {
+            return $(this).val();
+        }).get();
+
+        if (selectedIds.length === 0) {
+            alert('Please select at least one household');
+            return;
+        }
+
+        const trainingDate = $('#attendance-date').val();
+        if (!trainingDate) {
+            alert('Please select a training date');
+            return;
+        }
 
         const submitBtn = $('#submit-add-household');
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding ' + selectedIds.length + '...');
 
         $.ajax({
             url: '/training/' + trainingId + '/add-household/',
             type: 'POST',
-            data: formData,
+            data: {
+                'household_ids[]': selectedIds,
+                'training_date': trainingDate,
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
             dataType: 'json',
+            traditional: true,
             success: function(data) {
                 console.log('Response received:', data);
                 if (data.success) {
-                    alert('Household added successfully!');
+                    alert(data.message);
                     location.reload();
                 } else {
                     alert('Error: ' + data.message);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX error adding household:', status, error);
-                console.error('Response:', xhr.responseText);
-                console.error('Status code:', xhr.status);
-                alert('Error adding household: ' + error + '\nStatus: ' + xhr.status);
+                console.error('AJAX error adding households:', status, error);
+                alert('Error adding households: ' + error);
             },
             complete: function() {
-                submitBtn.prop('disabled', false).html('<i class="fas fa-plus"></i> Add to Training');
+                submitBtn.prop('disabled', false).html('<i class="fas fa-plus"></i> Add Selected (<span id="submit-count">0</span>)');
+                updateSelectedCount();
             }
         });
     });
 
-    // Toggle attendance
+    // Toggle attendance - with explicit CSRF token
     $('.attendance-toggle').change(function() {
         const attendanceId = $(this).data('attendance-id');
         const isPresent = $(this).is(':checked');
         const row = $(this).closest('tr');
         const label = $(this).siblings('.attendance-label');
         const icon = row.find('td:first i');
+        const toggle = $(this);
 
-        $.post('/training/attendance/' + attendanceId + '/toggle/', {
-            attendance: isPresent
-        }, function(data) {
-            if (data.success) {
-                // Update label and styling
-                if (isPresent) {
-                    label.html('<span class="text-success">Present</span>');
-                    row.addClass('table-light');
-                    icon.removeClass('fa-times-circle text-warning').addClass('fa-check-circle text-success');
+        // Disable toggle while saving
+        toggle.prop('disabled', true);
+
+        $.ajax({
+            url: '/training/attendance/' + attendanceId + '/toggle/',
+            type: 'POST',
+            data: {
+                attendance: isPresent ? 'true' : 'false',
+                csrfmiddlewaretoken: csrftoken
+            },
+            success: function(data) {
+                if (data.success) {
+                    // Update label and styling
+                    if (isPresent) {
+                        label.html('<span class="text-success">Present</span>');
+                        row.addClass('table-light');
+                        icon.removeClass('fa-times-circle text-warning').addClass('fa-check-circle text-success');
+                    } else {
+                        label.html('<span class="text-warning">Absent</span>');
+                        row.removeClass('table-light');
+                        icon.removeClass('fa-check-circle text-success').addClass('fa-times-circle text-warning');
+                    }
+
+                    // Show save indicator
+                    $('#save-attendance').html('<i class="fas fa-check"></i> Saved!').removeClass('btn-outline-success').addClass('btn-success');
+                    setTimeout(function() {
+                        $('#save-attendance').html('<i class="fas fa-save"></i> All Changes Saved').removeClass('btn-success').addClass('btn-outline-success');
+                    }, 2000);
+
+                    // Update statistics without full page reload
+                    updateStatistics();
                 } else {
-                    label.html('<span class="text-warning">Absent</span>');
-                    row.removeClass('table-light');
-                    icon.removeClass('fa-check-circle text-success').addClass('fa-times-circle text-warning');
+                    alert('Error: ' + (data.message || 'Failed to update attendance'));
+                    // Revert toggle
+                    toggle.prop('checked', !isPresent);
                 }
-
-                // Update statistics (reload for simplicity)
-                setTimeout(function() {
-                    location.reload();
-                }, 1000);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error updating attendance:', status, error);
+                console.error('Response:', xhr.responseText);
+                let errorMsg = 'Error updating attendance. ';
+                if (xhr.status === 403) {
+                    errorMsg += 'Permission denied. Please refresh the page and try again.';
+                } else if (xhr.status === 404) {
+                    errorMsg += 'Attendance record not found.';
+                } else if (xhr.status === 500) {
+                    errorMsg += 'Server error. Please try again.';
+                } else {
+                    errorMsg += error || 'Unknown error occurred.';
+                }
+                alert(errorMsg);
+                // Revert toggle
+                toggle.prop('checked', !isPresent);
+            },
+            complete: function() {
+                toggle.prop('disabled', false);
             }
         });
     });
 
+    // Function to update statistics without full reload
+    function updateStatistics() {
+        let present = 0;
+        let absent = 0;
+        $('.attendance-toggle').each(function() {
+            if ($(this).is(':checked')) {
+                present++;
+            } else {
+                absent++;
+            }
+        });
+        const total = present + absent;
+        const rate = total > 0 ? Math.round((present * 100) / total) : 0;
+
+        // Update stat cards
+        $('.card.border-success h4').text(present);
+        $('.card.border-warning h4').text(absent);
+        $('.card.border-info h4').text(rate + '%');
+
+        // Update progress bar
+        $('.progress-bar.bg-success').css('width', rate + '%');
+    }
+
     // Mark all present
     $('#mark-all-present').click(function() {
-        $('.attendance-toggle:not(:checked)').trigger('click');
+        if (confirm('Mark all participants as present for this date?')) {
+            const uncheckedToggles = $('.attendance-toggle:not(:checked)');
+            uncheckedToggles.each(function(index) {
+                const toggle = $(this);
+                // Stagger the requests to avoid overwhelming the server
+                setTimeout(function() {
+                    toggle.prop('checked', true).trigger('change');
+                }, index * 200);
+            });
+        }
     });
 
     // Mark all absent
     $('#mark-all-absent').click(function() {
-        $('.attendance-toggle:checked').trigger('click');
+        if (confirm('Mark all participants as absent for this date?')) {
+            const checkedToggles = $('.attendance-toggle:checked');
+            checkedToggles.each(function(index) {
+                const toggle = $(this);
+                // Stagger the requests to avoid overwhelming the server
+                setTimeout(function() {
+                    toggle.prop('checked', false).trigger('change');
+                }, index * 200);
+            });
+        }
     });
 
     // Remove attendance
@@ -635,24 +851,38 @@ $(document).ready(function() {
         e.preventDefault();
         if (confirm('Are you sure you want to remove this household from the training?')) {
             const attendanceId = $(this).data('attendance-id');
+            const row = $('tr[data-attendance-id="' + attendanceId + '"]');
 
             $.ajax({
                 url: '/training/attendance/' + attendanceId + '/remove/',
                 type: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
                 success: function(data) {
                     if (data.success) {
-                        location.reload();
+                        // Remove row with animation
+                        row.fadeOut(300, function() {
+                            $(this).remove();
+                            updateStatistics();
+                        });
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to remove household'));
                     }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error removing household:', error);
+                    alert('Error removing household. Please try again.');
                 }
             });
         }
     });
 
-    // Save attendance (placeholder)
+    // Save attendance - show auto-save message (attendance is saved automatically on toggle)
     $('#save-attendance').click(function() {
-        $(this).html('<i class="fas fa-check"></i> Saved!').removeClass('btn-outline-success').addClass('btn-success');
+        $(this).html('<i class="fas fa-check"></i> All Changes Auto-Saved!').removeClass('btn-outline-success').addClass('btn-success');
         setTimeout(function() {
-            $('#save-attendance').html('<i class="fas fa-save"></i> Save All Changes').removeClass('btn-success').addClass('btn-outline-success');
+            $('#save-attendance').html('<i class="fas fa-save"></i> Changes Auto-Save').removeClass('btn-success').addClass('btn-outline-success');
         }, 2000);
     });
 });

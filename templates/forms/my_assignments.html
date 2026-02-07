@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}My Assigned Forms - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-tasks"></i> My Assigned Forms</h2>
+            <p class="text-muted">Forms assigned to you for completion</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Direct Assignments</h5>
+                </div>
+                <div class="card-body">
+                    {% if assignments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Form</th>
+                                    <th>Household/Business Group</th>
+                                    <th>Assigned By</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in assignments %}
+                                <tr>
+                                    <td>{{ assignment.form_template.name }}</td>
+                                    <td>
+                                        {% if assignment.household %}{{ assignment.household.name }}{% endif %}
+                                        {% if assignment.business_group %}{{ assignment.business_group.name }}{% endif %}
+                                    </td>
+                                    <td>{{ assignment.assigned_by.get_full_name }}</td>
+                                    <td>{{ assignment.due_date|date:"M d, Y"|default:"No deadline" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if assignment.status == 'completed' %}success{% elif assignment.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+                                            {{ assignment.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if assignment.status != 'completed' %}
+                                        <a href="{% url 'forms:fill_form' assignment.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-pencil-alt"></i> Fill Form
+                                        </a>
+                                        {% else %}
+                                        <a href="{% url 'forms:assignment_detail' assignment.id %}" class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No direct assignments</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if mentor_assignments %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Field Associate Assignments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Form</th>
+                                    <th>Assigned By (FA)</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mentor_assignment in mentor_assignments %}
+                                <tr>
+                                    <td>{{ mentor_assignment.form_assignment.form_template.name }}</td>
+                                    <td>{{ mentor_assignment.assigned_by_fa.get_full_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if mentor_assignment.status == 'completed' %}success{% elif mentor_assignment.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+                                            {{ mentor_assignment.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if mentor_assignment.status != 'completed' %}
+                                        <a href="{% url 'forms:fill_form' mentor_assignment.form_assignment.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-pencil-alt"></i> Fill Form
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

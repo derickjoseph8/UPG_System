@@ -6,9 +6,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-calendar-alt"></i> Business Mentor Cycles</h1>
     <div>
+        {% if perms.can_manage_bm_cycles %}
         <a href="{% url 'core:bm_cycle_create' %}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Add New Cycle
         </a>
+        {% endif %}
         <a href="{% url 'dashboard:dashboard' %}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Back to Dashboard
         </a>
@@ -42,15 +44,19 @@
                         <td><span class="badge bg-info">{{ cycle.cycle }}</span></td>
                         <td>{{ cycle.office }}</td>
                         <td>
+                            {% if perms.can_manage_bm_cycles %}
                             <a href="{% url 'core:bm_cycle_edit' cycle.id %}"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
+                            {% endif %}
+                            {% if user.is_superuser or user.role in 'ict_admin,me_staff' %}
                             <a href="{% url 'core:bm_cycle_delete' cycle.id %}"
                                class="btn btn-sm btn-outline-danger"
                                onclick="return confirm('Delete {{ cycle.bm_cycle_name }}?')">
                                 <i class="fas fa-trash"></i> Delete
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -61,9 +67,11 @@
         <div class="text-center py-5">
             <i class="fas fa-calendar-alt text-muted" style="font-size: 4rem;"></i>
             <p class="text-muted mt-3">No BM cycles found</p>
+            {% if perms.can_manage_bm_cycles %}
             <a href="{% url 'core:bm_cycle_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create First Cycle
             </a>
+            {% endif %}
         </div>
         {% endif %}
     </div>

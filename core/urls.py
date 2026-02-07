@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import kobo_views
 
 app_name = 'core'
 
@@ -22,4 +23,17 @@ urlpatterns = [
     # API endpoints
     path('api/bm-cycles/', views.api_bm_cycles, name='api_bm_cycles'),
     path('api/mentors/', views.api_mentors, name='api_mentors'),
+
+    # KoBoToolbox CSV Exports
+    path('kobo/export/', kobo_views.kobo_export_dashboard, name='kobo_export_dashboard'),
+    path('kobo/export/households/', kobo_views.export_households, name='kobo_export_households'),
+    path('kobo/export/bm-cycles/', kobo_views.export_bm_cycles, name='kobo_export_bm_cycles'),
+    path('kobo/export/villages/', kobo_views.export_villages, name='kobo_export_villages'),
+    path('kobo/export/business-groups/', kobo_views.export_business_groups, name='kobo_export_business_groups'),
+    path('kobo/export/mentors/', kobo_views.export_mentors, name='kobo_export_mentors'),
+    path('kobo/export/all/', kobo_views.export_all_zip, name='kobo_export_all'),
+
+    # KoBoToolbox API Integration
+    path('kobo/settings/', kobo_views.kobo_settings, name='kobo_settings'),
+    path('kobo/push/', kobo_views.push_to_kobo, name='kobo_push'),
 ]

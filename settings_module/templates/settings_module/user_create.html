@@ -49,13 +49,26 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="role" class="form-label">User Role <span class="text-danger">*</span></label>
-                            <select class="form-select" id="role" name="role" required>
+                            <select class="form-select" id="role" name="role" required onchange="toggleCustomRoleSelect()">
                                 {% for value, label in role_choices %}
                                 <option value="{{ value }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
+                        <div class="col-md-6 mb-3" id="customRoleContainer" style="display: none;">
+                            <label for="custom_role" class="form-label">Custom Role <span class="text-danger">*</span></label>
+                            <select class="form-select" id="custom_role" name="custom_role">
+                                <option value="">-- Select Custom Role --</option>
+                                {% for custom_role in custom_roles %}
+                                <option value="{{ custom_role.id }}">{{ custom_role.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select the custom role with specific permissions</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
                             <input type="password" class="form-control" id="password" name="password" required minlength="8">
@@ -192,4 +205,28 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCustomRoleSelect() {
+    const roleSelect = document.getElementById('role');
+    const customRoleContainer = document.getElementById('customRoleContainer');
+    const customRoleSelect = document.getElementById('custom_role');
+
+    if (roleSelect.value === 'custom') {
+        customRoleContainer.style.display = 'block';
+        customRoleSelect.required = true;
+    } else {
+        customRoleContainer.style.display = 'none';
+        customRoleSelect.required = false;
+        customRoleSelect.value = '';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleCustomRoleSelect();
+});
+</script>
 {% endblock %}

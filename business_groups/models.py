@@ -42,6 +42,14 @@ class BusinessGroup(models.Model):
     business_type = models.CharField(max_length=20, choices=BUSINESS_TYPE_CHOICES)
     business_type_detail = models.CharField(max_length=100, blank=True)  # e.g., cereal, barber shop
     formation_date = models.DateField()
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_business_groups',
+        help_text='User who created this business group'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

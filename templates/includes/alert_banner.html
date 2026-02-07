@@ -1,0 +1,21 @@
+{# Alert Banner Component #}
+{# Usage: {% include 'includes/alert_banner.html' with count=5 title='Pending Items' severity='warning' icon='fa-clock' action_url='/items/' %} #}
+
+{% if count and count > 0 %}
+<div class="alert alert-{{ severity|default:'warning' }} d-flex align-items-center gap-3 mb-3 shadow-sm" role="alert">
+    <div class="flex-shrink-0">
+        <i class="fas {{ icon|default:'fa-exclamation-circle' }} fs-4"></i>
+    </div>
+    <div class="flex-grow-1">
+        <strong>{{ count }} {{ title }}</strong>
+        {% if description %}
+        <p class="mb-0 small opacity-75">{{ description }}</p>
+        {% endif %}
+    </div>
+    {% if action_url %}
+    <a href="{{ action_url }}" class="btn btn-sm btn-{{ severity|default:'warning' }} flex-shrink-0">
+        {{ action_text|default:'View' }} <i class="fas fa-arrow-right ms-1"></i>
+    </a>
+    {% endif %}
+</div>
+{% endif %}

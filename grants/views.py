@@ -14,9 +14,9 @@ from households.models import Household
 @login_required
 def grants_dashboard(request):
     """Grants management dashboard with comprehensive statistics"""
-    # Check permissions
+    # Check permissions - allow PM, FA, Mentor, ICT, ME staff
     user_role = getattr(request.user, 'role', None)
-    if not (request.user.is_superuser or user_role in ['ict_admin', 'county_executive', 'field_associate']):
+    if not (request.user.is_superuser or user_role in ['ict_admin', 'program_manager', 'me_staff', 'field_associate', 'mentor', 'county_executive']):
         messages.error(request, 'You do not have permission to access grants management.')
         return redirect('dashboard:dashboard')
 
@@ -111,8 +111,8 @@ def grants_dashboard(request):
 def sb_grant_applications(request):
     """View and process SB grant applications"""
     user_role = getattr(request.user, 'role', None)
-    if not (request.user.is_superuser or user_role in ['ict_admin', 'county_executive', 'field_associate']):
-        messages.error(request, 'You do not have permission to process grants.')
+    if not (request.user.is_superuser or user_role in ['ict_admin', 'program_manager', 'me_staff', 'field_associate', 'mentor', 'county_executive']):
+        messages.error(request, 'You do not have permission to view grants.')
         return redirect('grants:grants_dashboard')
 
     grants = SBGrant.objects.all().order_by('-created_at')
@@ -148,8 +148,8 @@ def sb_grant_applications(request):
 def pr_grant_applications(request):
     """View and process PR grant applications"""
     user_role = getattr(request.user, 'role', None)
-    if not (request.user.is_superuser or user_role in ['ict_admin', 'county_executive', 'field_associate']):
-        messages.error(request, 'You do not have permission to process grants.')
+    if not (request.user.is_superuser or user_role in ['ict_admin', 'program_manager', 'me_staff', 'field_associate', 'mentor', 'county_executive']):
+        messages.error(request, 'You do not have permission to view grants.')
         return redirect('grants:grants_dashboard')
 
     grants = PRGrant.objects.all().order_by('-created_at')
@@ -185,7 +185,7 @@ def pr_grant_applications(request):
 def grant_detail(request, grant_type, grant_id):
     """View grant application details"""
     user_role = getattr(request.user, 'role', None)
-    if not (request.user.is_superuser or user_role in ['ict_admin', 'county_executive', 'field_associate']):
+    if not (request.user.is_superuser or user_role in ['ict_admin', 'program_manager', 'me_staff', 'field_associate', 'mentor', 'county_executive']):
         messages.error(request, 'You do not have permission to view grant details.')
         return redirect('grants:grants_dashboard')
 
@@ -207,7 +207,7 @@ def grant_detail(request, grant_type, grant_id):
 def process_grant(request, grant_type, grant_id):
     """Process grant application (approve/reject)"""
     user_role = getattr(request.user, 'role', None)
-    if not (request.user.is_superuser or user_role in ['ict_admin', 'county_executive', 'field_associate']):
+    if not (request.user.is_superuser or user_role in ['ict_admin', 'program_manager', 'me_staff', 'field_associate']):
         messages.error(request, 'You do not have permission to process grants.')
         return redirect('grants:grants_dashboard')
 

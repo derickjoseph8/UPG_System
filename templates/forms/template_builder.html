@@ -1,0 +1,885 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"Form Builder" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .field-palette {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .field-type-btn {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 10px;
+        margin-bottom: 8px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 4px;
+        cursor: move;
+        transition: all 0.2s;
+    }
+    .field-type-btn:hover {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+        transform: translateX(5px);
+    }
+    .field-type-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 10px;
+        color: #0d6efd;
+    }
+    .form-canvas {
+        min-height: 400px;
+        background: white;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .form-field-item {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+        position: relative;
+    }
+    .form-field-item:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 8px rgba(13,110,253,0.15);
+    }
+    .field-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 5px;
+    }
+    .field-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e7f1ff;
+        color: #0d6efd;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    .kobo-sync-card {
+        border-left: 4px solid #198754;
+    }
+    .sync-status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .status-never {
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+    .status-synced {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .status-failed {
+        background: #f8d7da;
+        color: #842029;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>{{ form_template.name|default:"New Form Template" }}</h2>
+                    <p class="text-muted">{{ form_template.description|default:"Build your dynamic form" }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'forms:template_list' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Back to Forms
+                    </a>
+                    <button type="button" class="btn btn-primary" onclick="saveFormTemplate()">
+                        <i class="fas fa-save"></i> Save Form
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Field Palette -->
+        <div class="col-md-3">
+            <div class="field-palette">
+                <h5 class="mb-3"><i class="fas fa-th-large"></i> Field Types</h5>
+
+                <!-- Text Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">TEXT FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="text">
+                        <i class="fas fa-font field-type-icon"></i>
+                        <span>Short Text</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="textarea">
+                        <i class="fas fa-align-left field-type-icon"></i>
+                        <span>Long Text</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="note">
+                        <i class="fas fa-sticky-note field-type-icon"></i>
+                        <span>Note/Display</span>
+                    </button>
+                </div>
+
+                <!-- Number Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">NUMERIC FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="number">
+                        <i class="fas fa-hashtag field-type-icon"></i>
+                        <span>Number</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="decimal">
+                        <i class="fas fa-calculator field-type-icon"></i>
+                        <span>Decimal</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="calculate">
+                        <i class="fas fa-function field-type-icon"></i>
+                        <span>Calculate</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="rating">
+                        <i class="fas fa-star field-type-icon"></i>
+                        <span>Rating (1-5)</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="range">
+                        <i class="fas fa-sliders-h field-type-icon"></i>
+                        <span>Range Slider</span>
+                    </button>
+                </div>
+
+                <!-- Contact Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">CONTACT FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="email">
+                        <i class="fas fa-envelope field-type-icon"></i>
+                        <span>Email</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="phone">
+                        <i class="fas fa-phone field-type-icon"></i>
+                        <span>Phone Number</span>
+                    </button>
+                </div>
+
+                <!-- Date/Time Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">DATE/TIME FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="date">
+                        <i class="fas fa-calendar field-type-icon"></i>
+                        <span>Date</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="time">
+                        <i class="fas fa-clock field-type-icon"></i>
+                        <span>Time</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="datetime">
+                        <i class="fas fa-calendar-alt field-type-icon"></i>
+                        <span>Date & Time</span>
+                    </button>
+                </div>
+
+                <!-- Choice Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">CHOICE FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="select">
+                        <i class="fas fa-caret-square-down field-type-icon"></i>
+                        <span>Dropdown</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="radio">
+                        <i class="fas fa-dot-circle field-type-icon"></i>
+                        <span>Radio Buttons</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="checkbox">
+                        <i class="fas fa-check-square field-type-icon"></i>
+                        <span>Checkboxes</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="boolean">
+                        <i class="fas fa-toggle-on field-type-icon"></i>
+                        <span>Yes/No</span>
+                    </button>
+                </div>
+
+                <!-- Media Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">MEDIA FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="image">
+                        <i class="fas fa-image field-type-icon"></i>
+                        <span>Image/Photo</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="audio">
+                        <i class="fas fa-microphone field-type-icon"></i>
+                        <span>Audio</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="video">
+                        <i class="fas fa-video field-type-icon"></i>
+                        <span>Video</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="file">
+                        <i class="fas fa-file field-type-icon"></i>
+                        <span>File Upload</span>
+                    </button>
+                </div>
+
+                <!-- Special Fields -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">SPECIAL FIELDS</h6>
+                    <button class="field-type-btn btn w-100" data-type="location">
+                        <i class="fas fa-map-marker-alt field-type-icon"></i>
+                        <span>GPS Location</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="signature">
+                        <i class="fas fa-signature field-type-icon"></i>
+                        <span>Signature</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="barcode">
+                        <i class="fas fa-barcode field-type-icon"></i>
+                        <span>Barcode/QR</span>
+                    </button>
+                </div>
+
+                <!-- Organizational -->
+                <div class="mb-3">
+                    <h6 class="text-muted small">ORGANIZATION</h6>
+                    <button class="field-type-btn btn w-100" data-type="section">
+                        <i class="fas fa-layer-group field-type-icon"></i>
+                        <span>Section Header</span>
+                    </button>
+                    <button class="field-type-btn btn w-100" data-type="group">
+                        <i class="fas fa-object-group field-type-icon"></i>
+                        <span>Field Group</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Builder -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Form Canvas</h5>
+                </div>
+                <div class="card-body">
+                    <div id="formCanvas" class="form-canvas">
+                        <p class="text-muted text-center py-5">
+                            <i class="fas fa-mouse-pointer fa-3x mb-3 d-block"></i>
+                            Click on field types from the left palette to add them to your form
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Settings & Kobo Sync -->
+        <div class="col-md-3">
+            <!-- Form Settings -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Form Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Form Name</label>
+                        <input type="text" class="form-control" id="formName"
+                               value="{{ form_template.name|default:'' }}"
+                               placeholder="Enter form name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="formDescription"
+                                  rows="3" placeholder="Describe your form">{{ form_template.description|default:'' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Form Type</label>
+                        <select class="form-select" id="formType">
+                            <option value="household_survey" {% if form_template.form_type == 'household_survey' %}selected{% endif %}>Household Survey</option>
+                            <option value="business_survey" {% if form_template.form_type == 'business_survey' %}selected{% endif %}>Business Progress Survey</option>
+                            <option value="ppi_assessment" {% if form_template.form_type == 'ppi_assessment' %}selected{% endif %}>PPI Assessment</option>
+                            <option value="baseline_survey" {% if form_template.form_type == 'baseline_survey' %}selected{% endif %}>Baseline Survey</option>
+                            <option value="midline_survey" {% if form_template.form_type == 'midline_survey' %}selected{% endif %}>Midline Survey</option>
+                            <option value="endline_survey" {% if form_template.form_type == 'endline_survey' %}selected{% endif %}>Endline Survey</option>
+                            <option value="training_evaluation" {% if form_template.form_type == 'training_evaluation' %}selected{% endif %}>Training Evaluation</option>
+                            <option value="mentoring_report" {% if form_template.form_type == 'mentoring_report' %}selected{% endif %}>Mentoring Report</option>
+                            <option value="custom_form" {% if form_template.form_type == 'custom_form' %}selected{% endif %}>Custom Form</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="formStatus">
+                            <option value="draft" {% if form_template.status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="active" {% if form_template.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="inactive" {% if form_template.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                            <option value="archived" {% if form_template.status == 'archived' %}selected{% endif %}>Archived</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Form Purpose</label>
+                        <select class="form-select" id="formPurpose" onchange="toggleFieldMapping()">
+                            <option value="general" {% if form_template.form_purpose == 'general' %}selected{% endif %}>General Form (No Validation)</option>
+                            <option value="new_registration" {% if form_template.form_purpose == 'new_registration' %}selected{% endif %}>New Beneficiary Registration</option>
+                            <option value="program_enrollment" {% if form_template.form_purpose == 'program_enrollment' %}selected{% endif %}>Program Enrollment</option>
+                            <option value="survey" {% if form_template.form_purpose == 'survey' %}selected{% endif %}>Survey/Assessment</option>
+                            <option value="update_details" {% if form_template.form_purpose == 'update_details' %}selected{% endif %}>Update Beneficiary Details</option>
+                        </select>
+                        <small class="text-muted">
+                            Determines how submissions are validated against MIS data
+                        </small>
+                    </div>
+                    <div id="fieldMappingSection" style="display: {% if form_template.form_purpose and form_template.form_purpose != 'general' %}block{% else %}none{% endif %};">
+                        <label class="form-label">Field Mapping</label>
+                        <small class="text-muted d-block mb-2">
+                            Map form fields to MIS fields for validation
+                        </small>
+                        <div class="mb-2">
+                            <label class="form-label small">ID Number Field</label>
+                            <input type="text" class="form-control form-control-sm" id="mappingIdNumber"
+                                   value="{{ form_template.field_mapping.id_number|default:'' }}"
+                                   placeholder="e.g., national_id, id_number">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Phone Number Field</label>
+                            <input type="text" class="form-control form-control-sm" id="mappingPhone"
+                                   value="{{ form_template.field_mapping.phone_number|default:'' }}"
+                                   placeholder="e.g., phone_number, mobile">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Village Field</label>
+                            <input type="text" class="form-control form-control-sm" id="mappingVillage"
+                                   value="{{ form_template.field_mapping.village|default:'' }}"
+                                   placeholder="e.g., village, village_name">
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="allowMultipleSubmissions"
+                               {% if form_template.allow_multiple_submissions %}checked{% endif %}>
+                        <label class="form-check-label" for="allowMultipleSubmissions">
+                            Allow Multiple Submissions
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="requirePhoto"
+                               {% if form_template.require_photo_evidence %}checked{% endif %}>
+                        <label class="form-check-label" for="requirePhoto">
+                            Require Photo Evidence
+                        </label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="requireGPS"
+                               {% if form_template.require_gps_location %}checked{% endif %}>
+                        <label class="form-check-label" for="requireGPS">
+                            Require GPS Location
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Field Associate Assignment Section -->
+            {% if can_assign_fa and field_associates %}
+            <div class="card mb-3 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Assign Field Associates</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Select Field Associates to manage this form. They will be able to assign mentors.</p>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="select_all_fas">
+                        <label class="form-check-label fw-bold" for="select_all_fas">
+                            Select All Field Associates ({{ field_associates|length }})
+                        </label>
+                    </div>
+
+                    <div id="fa-checkboxes" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                        {% for fa in field_associates %}
+                        <div class="form-check">
+                            <input class="form-check-input fa-checkbox" type="checkbox"
+                                   name="field_associates[]" value="{{ fa.id }}" id="fa-{{ fa.id }}"
+                                   {% if fa.id in assigned_fa_ids %}checked{% endif %}>
+                            <label class="form-check-label" for="fa-{{ fa.id }}">
+                                {{ fa.get_full_name }}
+                                {% if fa.email %}<small class="text-muted">({{ fa.email }})</small>{% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-2">
+                        <small class="text-muted"><i class="fas fa-info-circle"></i> Selected FAs will receive a notification to assign mentors from their team.</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- KoboToolbox Sync -->
+            <div class="card kobo-sync-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-sync-alt"></i> KoboToolbox Sync</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="syncToKobo"
+                               {% if form_template.sync_to_kobo %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="syncToKobo">
+                            Enable KoboToolbox Sync
+                        </label>
+                        <small class="text-muted d-block mt-1">
+                            Enable offline data collection via KoboCollect mobile app
+                        </small>
+                    </div>
+
+                    {% if form_template.kobo_asset_uid %}
+                    <div class="alert alert-info p-2 mb-3">
+                        <strong>Sync Status:</strong>
+                        <span class="sync-status-badge status-{{ form_template.kobo_sync_status }}">
+                            {{ form_template.get_kobo_sync_status_display }}
+                        </span>
+                        <hr class="my-2">
+                        <small>
+                            <strong>Last Synced:</strong><br>
+                            {{ form_template.last_synced_at|date:"M d, Y H:i"|default:"Never" }}
+                        </small>
+                        {% if form_template.kobo_form_url %}
+                        <hr class="my-2">
+                        <a href="{{ form_template.kobo_form_url }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="fas fa-external-link-alt"></i> View in KoboToolbox
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'forms:kobo_preview' form_template.id %}" class="btn btn-info w-100 mb-2">
+                        <i class="fas fa-eye"></i> Preview Form Structure
+                    </a>
+
+                    <button type="button" class="btn btn-primary w-100 mb-2"
+                            onclick="manualSyncToKobo({{ form_template.id }})">
+                        <i class="fas fa-sync"></i> Sync to KoboToolbox
+                    </button>
+
+                    <a href="{% url 'forms:kobo_sync_history' form_template.id %}"
+                       class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-history"></i> Sync History
+                    </a>
+
+                    {% if form_template.last_sync_error %}
+                    <div class="alert alert-danger p-2 mt-3 mb-0">
+                        <strong>Last Error:</strong><br>
+                        <small>{{ form_template.last_sync_error }}</small>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="alert alert-warning p-2 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            Save the form and set status to <strong>Active</strong> to sync with KoboToolbox
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Field Editor Modal -->
+<div class="modal fade" id="fieldEditorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Field</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="fieldEditorForm">
+                    <input type="hidden" id="editFieldIndex">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Field Label *</label>
+                            <input type="text" class="form-control" id="editFieldLabel" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Field Name *</label>
+                            <input type="text" class="form-control" id="editFieldName" required>
+                            <small class="text-muted">No spaces or special characters</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Help Text</label>
+                            <textarea class="form-control" id="editFieldHelpText" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="editFieldRequired">
+                                <label class="form-check-label" for="editFieldRequired">Required Field</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="choicesContainer" style="display:none;">
+                        <label class="form-label">Choices (one per line)</label>
+                        <textarea class="form-control" id="editFieldChoices" rows="5"
+                                  placeholder="Choice 1&#10;Choice 2&#10;Choice 3"></textarea>
+                    </div>
+                    <div id="validationContainer" style="display:none;">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Min Value</label>
+                                <input type="number" class="form-control" id="editFieldMinValue">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Max Value</label>
+                                <input type="number" class="form-control" id="editFieldMaxValue">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveFieldEdit()">Save Field</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let formFields = [];
+let editingFieldIndex = null;
+
+// Load existing fields when editing a form template
+{% if form_fields and form_fields.count > 0 %}
+// Load from related FormField objects (database)
+formFields = [
+    {% for field in form_fields %}
+    {
+        type: '{{ field.field_type }}',
+        label: '{{ field.field_label|escapejs }}',
+        name: '{{ field.field_name|escapejs }}',
+        required: {{ field.required|yesno:"true,false" }},
+        helpText: '{{ field.help_text|escapejs }}',
+        choices: {{ field.choices|safe|default:"[]" }},
+        validation: {
+            {% if field.min_value %}min: {{ field.min_value }},{% endif %}
+            {% if field.max_value %}max: {{ field.max_value }}{% endif %}
+        }
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+{% elif form_template and form_template.form_fields|length > 0 %}
+// Fallback to JSONField data
+formFields = {{ form_template.form_fields|safe }};
+{% endif %}
+
+// Add field to canvas
+document.querySelectorAll('.field-type-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const fieldType = this.dataset.type;
+        addFieldToCanvas(fieldType);
+    });
+});
+
+// Render canvas on page load if we have existing fields
+document.addEventListener('DOMContentLoaded', function() {
+    if (formFields.length > 0) {
+        renderFormCanvas();
+    }
+
+    // Select All FAs functionality
+    const selectAllFAs = document.getElementById('select_all_fas');
+    if (selectAllFAs) {
+        selectAllFAs.addEventListener('change', function() {
+            document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+                cb.checked = selectAllFAs.checked;
+            });
+        });
+
+        // Update Select All when individual checkboxes change
+        document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const totalFAs = document.querySelectorAll('.fa-checkbox').length;
+                const checkedFAs = document.querySelectorAll('.fa-checkbox:checked').length;
+                selectAllFAs.checked = (totalFAs === checkedFAs);
+                selectAllFAs.indeterminate = (checkedFAs > 0 && checkedFAs < totalFAs);
+            });
+        });
+
+        // Set initial state
+        const totalFAs = document.querySelectorAll('.fa-checkbox').length;
+        const checkedFAs = document.querySelectorAll('.fa-checkbox:checked').length;
+        if (totalFAs > 0) {
+            selectAllFAs.checked = (totalFAs === checkedFAs);
+            selectAllFAs.indeterminate = (checkedFAs > 0 && checkedFAs < totalFAs);
+        }
+    }
+});
+
+function addFieldToCanvas(fieldType) {
+    const field = {
+        type: fieldType,
+        label: `New ${fieldType} Field`,
+        name: `field_${Date.now()}`,
+        required: false,
+        helpText: '',
+        choices: [],
+        validation: {}
+    };
+
+    formFields.push(field);
+    renderFormCanvas();
+
+    // Open editor for the new field
+    editField(formFields.length - 1);
+}
+
+function renderFormCanvas() {
+    const canvas = document.getElementById('formCanvas');
+
+    if (formFields.length === 0) {
+        canvas.innerHTML = `
+            <p class="text-muted text-center py-5">
+                <i class="fas fa-mouse-pointer fa-3x mb-3 d-block"></i>
+                Click on field types from the left palette to add them to your form
+            </p>
+        `;
+        return;
+    }
+
+    canvas.innerHTML = formFields.map((field, index) => `
+        <div class="form-field-item">
+            <div class="field-actions">
+                <button class="btn btn-sm btn-outline-primary" onclick="editField(${index})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteField(${index})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <span class="field-badge">${field.type}</span>
+            ${field.required ? '<span class="badge bg-danger ms-2">Required</span>' : ''}
+            <h6 class="mb-1">${field.label}</h6>
+            <small class="text-muted">${field.name}</small>
+            ${field.helpText ? `<p class="text-muted small mb-0 mt-2">${field.helpText}</p>` : ''}
+        </div>
+    `).join('');
+}
+
+function editField(index) {
+    editingFieldIndex = index;
+    const field = formFields[index];
+
+    document.getElementById('editFieldIndex').value = index;
+    document.getElementById('editFieldLabel').value = field.label;
+    document.getElementById('editFieldName').value = field.name;
+    document.getElementById('editFieldHelpText').value = field.helpText || '';
+    document.getElementById('editFieldRequired').checked = field.required;
+
+    // Show/hide choices based on field type
+    const choicesContainer = document.getElementById('choicesContainer');
+    const validationContainer = document.getElementById('validationContainer');
+
+    if (['select', 'radio', 'checkbox'].includes(field.type)) {
+        choicesContainer.style.display = 'block';
+        document.getElementById('editFieldChoices').value = field.choices.join('\n');
+    } else {
+        choicesContainer.style.display = 'none';
+    }
+
+    if (['number', 'decimal', 'rating', 'range'].includes(field.type)) {
+        validationContainer.style.display = 'block';
+        document.getElementById('editFieldMinValue').value = field.validation.min || '';
+        document.getElementById('editFieldMaxValue').value = field.validation.max || '';
+    } else {
+        validationContainer.style.display = 'none';
+    }
+
+    new bootstrap.Modal(document.getElementById('fieldEditorModal')).show();
+}
+
+function saveFieldEdit() {
+    const index = parseInt(document.getElementById('editFieldIndex').value);
+    const field = formFields[index];
+
+    field.label = document.getElementById('editFieldLabel').value;
+    field.name = document.getElementById('editFieldName').value;
+    field.helpText = document.getElementById('editFieldHelpText').value;
+    field.required = document.getElementById('editFieldRequired').checked;
+
+    if (['select', 'radio', 'checkbox'].includes(field.type)) {
+        field.choices = document.getElementById('editFieldChoices').value
+            .split('\n')
+            .filter(c => c.trim())
+            .map(c => c.trim());
+    }
+
+    if (['number', 'decimal', 'rating', 'range'].includes(field.type)) {
+        field.validation = {
+            min: document.getElementById('editFieldMinValue').value,
+            max: document.getElementById('editFieldMaxValue').value
+        };
+    }
+
+    renderFormCanvas();
+    bootstrap.Modal.getInstance(document.getElementById('fieldEditorModal')).hide();
+}
+
+function deleteField(index) {
+    if (confirm('Are you sure you want to delete this field?')) {
+        formFields.splice(index, 1);
+        renderFormCanvas();
+    }
+}
+
+function saveFormTemplate() {
+    const formName = document.getElementById('formName').value.trim();
+
+    // Validate form name
+    if (!formName) {
+        alert('Please enter a form name');
+        document.getElementById('formName').focus();
+        return;
+    }
+
+    // Build field mapping object
+    const fieldMapping = {};
+    const idNumberField = document.getElementById('mappingIdNumber').value.trim();
+    const phoneField = document.getElementById('mappingPhone').value.trim();
+    const villageField = document.getElementById('mappingVillage').value.trim();
+    if (idNumberField) fieldMapping.id_number = idNumberField;
+    if (phoneField) fieldMapping.phone_number = phoneField;
+    if (villageField) fieldMapping.village = villageField;
+
+    // Collect selected Field Associates
+    const selectedFAs = [];
+    document.querySelectorAll('.fa-checkbox:checked').forEach(function(cb) {
+        selectedFAs.push(cb.value);
+    });
+
+    const data = {
+        {% if form_template %}
+        id: {{ form_template.id }},
+        {% endif %}
+        name: formName,
+        description: document.getElementById('formDescription').value,
+        form_type: document.getElementById('formType').value,
+        status: document.getElementById('formStatus').value,
+        form_purpose: document.getElementById('formPurpose').value,
+        field_mapping: fieldMapping,
+        sync_to_kobo: document.getElementById('syncToKobo').checked,
+        allow_multiple_submissions: document.getElementById('allowMultipleSubmissions').checked,
+        require_photo_evidence: document.getElementById('requirePhoto').checked,
+        require_gps_location: document.getElementById('requireGPS').checked,
+        fields: formFields,
+        field_associates: selectedFAs
+    };
+
+    // Disable save button and show loading state
+    const saveBtn = document.querySelector('button[onclick="saveFormTemplate()"]');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    fetch('/forms/api/save-template/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(result.message);
+            // Redirect to the builder page for the saved template
+            if (result.redirect_url) {
+                window.location.href = result.redirect_url;
+            }
+        } else {
+            alert(`Error: ${result.message}`);
+        }
+    })
+    .catch(error => {
+        alert(`Error saving form: ${error.message}`);
+    })
+    .finally(() => {
+        // Re-enable save button
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
+
+function manualSyncToKobo(formId) {
+    if (!confirm('Sync this form to KoboToolbox? This will update the form structure and reference data.')) {
+        return;
+    }
+
+    fetch(`/forms/kobo/sync/${formId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Form synced successfully to KoboToolbox!');
+            location.reload();
+        } else {
+            alert(`Sync failed: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        alert(`Error: ${error.message}`);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function toggleFieldMapping() {
+    const purpose = document.getElementById('formPurpose').value;
+    const mappingSection = document.getElementById('fieldMappingSection');
+    if (purpose === 'general') {
+        mappingSection.style.display = 'none';
+    } else {
+        mappingSection.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

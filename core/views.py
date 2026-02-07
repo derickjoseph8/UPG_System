@@ -509,7 +509,7 @@ def bm_cycle_list(request):
     user = request.user
     user_role = getattr(user, 'role', None)
 
-    if not (user.is_superuser or user_role in ['ict_admin', 'me_staff', 'field_associate']):
+    if not (user.is_superuser or user_role in ['ict_admin', 'me_staff', 'field_associate', 'mentor', 'program_manager']):
         messages.error(request, 'You do not have permission to manage BM Cycles.')
         return redirect('dashboard:dashboard')
 
@@ -528,7 +528,7 @@ def bm_cycle_create(request):
     user = request.user
     user_role = getattr(user, 'role', None)
 
-    if not (user.is_superuser or user_role in ['ict_admin', 'me_staff', 'field_associate']):
+    if not (user.is_superuser or user_role in ['ict_admin', 'me_staff', 'field_associate', 'mentor', 'program_manager']):
         messages.error(request, 'You do not have permission to create BM Cycles.')
         return redirect('dashboard:dashboard')
 
@@ -562,14 +562,52 @@ def bm_cycle_create(request):
 
     # Get mentors and field associates for dropdowns
     from .models import Mentor
-    mentors = Mentor.objects.all().order_by('first_name', 'last_name')
     field_associates = User.objects.filter(role='field_associate').order_by('first_name', 'last_name')
+
+    # Auto-select and filter mentors based on role
+    current_mentor = None
+
+    if user_role == 'mentor':
+        # Mentors see all mentors but their own profile is auto-selected
+        mentors = Mentor.objects.all().order_by('first_name', 'last_name')
+        if hasattr(user, 'mentor_profile'):
+            current_mentor = user.mentor_profile
+
+    elif user_role == 'field_associate':
+        # Field Associates see only their supervised mentors + themselves
+        supervised_mentor_users = []
+        if hasattr(user, 'profile') and user.profile:
+            supervised_mentor_users = list(user.profile.supervised_mentors.values_list('id', flat=True))
+
+        # Get Mentor profiles for supervised users
+        mentors = Mentor.objects.filter(user_id__in=supervised_mentor_users).order_by('first_name', 'last_name')
+
+        # Also include FA's own mentor profile if they have one (can act as mentor)
+        if hasattr(user, 'mentor_profile'):
+            current_mentor = user.mentor_profile
+            # Add FA's own mentor profile to the list if not already there
+            if current_mentor and current_mentor not in mentors:
+                mentors = list(mentors) + [current_mentor]
+
+        # If FA has no supervised mentors and no mentor profile, show all mentors
+        if not mentors:
+            mentors = Mentor.objects.all().order_by('first_name', 'last_name')
+    else:
+        # Admins and others see all mentors
+        mentors = Mentor.objects.all().order_by('first_name', 'last_name')
+
+    # Auto-select Field Associate if creating user is an FA
+    current_field_associate = None
+    if user_role == 'field_associate':
+        current_field_associate = user.get_full_name()
 
     context = {
         'page_title': 'Create BM Cycle',
         'mentors': mentors,
         'field_associates': field_associates,
         'cycle': None,
+        'current_mentor': current_mentor,
+        'current_field_associate': current_field_associate,
     }
     return render(request, 'core/bm_cycle_form.html', context)
 
@@ -580,7 +618,7 @@ def bm_cycle_edit(request, cycle_id):
     user = request.user
     user_role = getattr(user, 'role', None)
 
-    if not (user.is_superuser or user_role in ['ict_admin', 'me_staff', 'field_associate']):
+    if not (user.is_superuser or user_role in ['ict_admin', 'me_staff', 'field_associate', 'mentor', 'program_manager']):
         messages.error(request, 'You do not have permission to edit BM Cycles.')
         return redirect('dashboard:dashboard')
 

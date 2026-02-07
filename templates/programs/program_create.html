@@ -82,6 +82,42 @@
                         <div class="form-text">Example: National ID, household roster, motivation letter</div>
                     </div>
 
+                    <!-- Field Associate Assignment Section -->
+                    {% if field_associates %}
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Assign Field Associates</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Select Field Associates to manage this program. They will be notified to assign their mentors.</p>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="select_all_fas" name="select_all_fas">
+                                <label class="form-check-label fw-bold" for="select_all_fas">
+                                    Select All Field Associates ({{ field_associates|length }})
+                                </label>
+                            </div>
+
+                            <div id="fa-checkboxes" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                                {% for fa in field_associates %}
+                                <div class="form-check">
+                                    <input class="form-check-input fa-checkbox" type="checkbox"
+                                           name="field_associates[]" value="{{ fa.id }}" id="fa-{{ fa.id }}">
+                                    <label class="form-check-label" for="fa-{{ fa.id }}">
+                                        {{ fa.get_full_name }}
+                                        {% if fa.email %}<small class="text-muted">({{ fa.email }})</small>{% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> Selected FAs will receive a notification to assign mentors from their team.</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <div class="d-flex justify-content-end gap-2">
                         <a href="{% url 'programs:program_list' %}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancel
@@ -153,4 +189,27 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select All FAs
+    const selectAllFAs = document.getElementById('select_all_fas');
+    if (selectAllFAs) {
+        selectAllFAs.addEventListener('change', function() {
+            document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+                cb.checked = selectAllFAs.checked;
+            });
+        });
+
+        // Update Select All when individual checkboxes change
+        document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const totalFAs = document.querySelectorAll('.fa-checkbox').length;
+                const checkedFAs = document.querySelectorAll('.fa-checkbox:checked').length;
+                selectAllFAs.checked = (totalFAs === checkedFAs);
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

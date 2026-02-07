@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import csv
 import json
 from .models import Household, HouseholdProgram, UPGMilestone
-from programs.models import Program
+from core.models import Program
 
 
 @login_required
@@ -25,13 +25,11 @@ def graduation_dashboard(request):
         messages.error(request, 'You do not have permission to access graduation tracking.')
         return redirect('dashboard:dashboard')
 
-    # Filter for UPG programs only
-    upg_programs = Program.objects.filter(program_type='graduation')
+    # Get all active UPG programs (all programs in this system are UPG graduation programs)
+    upg_programs = Program.objects.filter(status='active')
 
-    # Get household programs for UPG programs
-    household_programs = HouseholdProgram.objects.filter(
-        program__program_type='graduation'
-    ).select_related('household', 'program')
+    # Get all household programs
+    household_programs = HouseholdProgram.objects.all().select_related('household', 'program')
 
     # Apply role-based filtering
     if user_role == 'mentor':
@@ -238,8 +236,8 @@ def graduation_reports(request):
         messages.error(request, 'You do not have permission to access graduation reports.')
         return redirect('dashboard:dashboard')
 
-    # Get UPG programs
-    upg_programs = Program.objects.filter(program_type='graduation')
+    # Get UPG programs (all active programs in this system are UPG graduation programs)
+    upg_programs = Program.objects.filter(status='active')
 
     # Detailed analytics
     program_analytics = []
@@ -305,8 +303,8 @@ def export_graduation_reports(request):
 
     export_format = request.GET.get('format', 'excel')
 
-    # Get UPG programs
-    upg_programs = Program.objects.filter(program_type='graduation')
+    # Get UPG programs (all active programs in this system are UPG graduation programs)
+    upg_programs = Program.objects.filter(status='active')
 
     # Prepare data
     data = []

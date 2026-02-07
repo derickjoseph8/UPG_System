@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VE Reporting API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #2c3e50; }
+        .endpoint-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .endpoint-card { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .endpoint-card h3 { margin: 0 0 10px 0; color: #3498db; font-size: 14px; }
+        .endpoint-card button { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%; }
+        .endpoint-card button:hover { background: #2980b9; }
+        .endpoint-card button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .result { margin-top: 10px; background: #ecf0f1; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; }
+        .config { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .config input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .config label { font-weight: bold; color: #555; }
+        .status { padding: 5px 10px; border-radius: 4px; display: inline-block; margin-left: 10px; font-size: 12px; }
+        .status.connected { background: #e8f5e9; color: #2e7d32; }
+        .status.disconnected { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VE Reporting API Test <span id="status" class="status disconnected">Not Connected</span></h1>
+
+        <div class="config">
+            <label>Base URL:</label>
+            <input type="text" id="baseUrl" value="http://localhost:8000/api/v1/ve-reporting">
+            <label>API Key:</label>
+            <input type="text" id="apiKey" value="ve_live_hqZk1AKRQg3InWc4SpOu3UtPX7FtaKl69jo0aey2PjU">
+        </div>
+
+        <div class="endpoint-grid">
+            <div class="endpoint-card">
+                <h3>GET /health/</h3>
+                <button onclick="testEndpoint('health')">Test Health</button>
+                <div id="result-health" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /metadata/</h3>
+                <button onclick="testEndpoint('metadata')">Test Metadata</button>
+                <div id="result-metadata" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /summary/</h3>
+                <button onclick="testEndpoint('summary')">Test Summary</button>
+                <div id="result-summary" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /beneficiaries/</h3>
+                <button onclick="testEndpoint('beneficiaries')">Test Beneficiaries</button>
+                <div id="result-beneficiaries" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /enrollment/</h3>
+                <button onclick="testEndpoint('enrollment')">Test Enrollment</button>
+                <div id="result-enrollment" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /graduation/</h3>
+                <button onclick="testEndpoint('graduation')">Test Graduation</button>
+                <div id="result-graduation" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /savings/</h3>
+                <button onclick="testEndpoint('savings')">Test Savings</button>
+                <div id="result-savings" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /training/</h3>
+                <button onclick="testEndpoint('training')">Test Training</button>
+                <div id="result-training" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /disbursements/</h3>
+                <button onclick="testEndpoint('disbursements')">Test Disbursements</button>
+                <div id="result-disbursements" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /milestones/</h3>
+                <button onclick="testEndpoint('milestones')">Test Milestones</button>
+                <div id="result-milestones" class="result"></div>
+            </div>
+
+            <div class="endpoint-card">
+                <h3>GET /timeseries/?metric=enrollment</h3>
+                <button onclick="testEndpoint('timeseries', '?metric=enrollment')">Test Timeseries</button>
+                <div id="result-timeseries" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function testEndpoint(endpoint, query = '') {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const resultDiv = document.getElementById('result-' + endpoint);
+            const statusSpan = document.getElementById('status');
+
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(`${baseUrl}/${endpoint}/${query}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-VE-API-Key': apiKey
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                    statusSpan.className = 'status connected';
+                    statusSpan.textContent = 'Connected';
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Error: ' + error.message;
+                statusSpan.className = 'status disconnected';
+                statusSpan.textContent = 'Connection Failed';
+            }
+        }
+
+        // Test health on page load
+        window.onload = () => testEndpoint('health');
+    </script>
+</body>
+</html>

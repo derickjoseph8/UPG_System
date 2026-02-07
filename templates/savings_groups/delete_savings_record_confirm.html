@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_list' %}">Savings Groups</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_group_detail' savings_group.pk %}">{{ savings_group.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_report' savings_group.pk %}">Savings Report</a></li>
+            <li class="breadcrumb-item active">Delete Record</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5><i class="fas fa-trash"></i> Delete Savings Record</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone. The savings amount will be subtracted from the member's total savings and the group total.
+                    </div>
+
+                    <p><strong>Member:</strong> {{ record.member.household }}</p>
+                    <p><strong>Amount:</strong> KES {{ record.amount|floatformat:2 }}</p>
+                    <p><strong>Savings Date:</strong> {{ record.savings_date|date:"M d, Y" }}</p>
+                    <p><strong>Recorded By:</strong> {{ record.recorded_by.get_full_name|default:record.recorded_by.username|default:"N/A" }}</p>
+                    {% if record.notes %}
+                    <p><strong>Notes:</strong> {{ record.notes }}</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Yes, Delete This Record
+                            </button>
+                            <a href="{% url 'savings_groups:savings_report' savings_group.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

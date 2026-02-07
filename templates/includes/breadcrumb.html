@@ -1,0 +1,82 @@
+<!-- Breadcrumb Navigation Component -->
+<!--
+Usage in templates:
+{% block breadcrumb %}
+{% include 'includes/breadcrumb.html' with items=breadcrumb_items %}
+{% endblock %}
+
+Where breadcrumb_items is a list of dicts: [{'label': 'Home', 'url': '/'}, {'label': 'Households', 'url': '/households/'}, {'label': 'John Doe'}]
+The last item (without url) is the current page.
+-->
+
+{% if items %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a href="{% url 'dashboard:dashboard' %}">
+                <i class="fas fa-home"></i>
+            </a>
+        </li>
+        {% for item in items %}
+            {% if item.url %}
+            <li class="breadcrumb-item">
+                <a href="{{ item.url }}">{{ item.label }}</a>
+            </li>
+            {% else %}
+            <li class="breadcrumb-item active" aria-current="page">{{ item.label }}</li>
+            {% endif %}
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}
+
+<style>
+.breadcrumb {
+    background-color: #f8f9fa;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.breadcrumb-item a {
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.15s ease-in-out;
+}
+
+.breadcrumb-item a:hover {
+    color: #007bff;
+}
+
+.breadcrumb-item.active {
+    color: #495057;
+    font-weight: 500;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "\f054";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 0.625rem;
+    color: #adb5bd;
+    padding-right: 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+    .breadcrumb {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    /* Hide middle items on very small screens */
+    .breadcrumb-item:not(:first-child):not(:last-child) {
+        display: none;
+    }
+
+    .breadcrumb-item:last-child::before {
+        content: "...";
+        font-family: inherit;
+        padding-right: 0.5rem;
+    }
+}
+</style>

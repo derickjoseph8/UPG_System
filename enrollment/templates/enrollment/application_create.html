@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}New Application - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-plus"></i> New Enrollment Application</h2>
+                    <p class="text-muted">Submit a new beneficiary application</p>
+                </div>
+                <div>
+                    <a href="{% url 'enrollment:application_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-plus"></i> Application Form</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="applicationForm">
+                        {% csrf_token %}
+
+                        <!-- Personal Information -->
+                        <h5 class="mb-3">Personal Information</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="middle_name" class="form-label">Middle Name</label>
+                                <input type="text" class="form-control" id="middle_name" name="middle_name">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" required>
+                            </div>
+                        </div>
+
+                        <!-- Contact & Validation Information -->
+                        <h5 class="mb-3 mt-4">Contact & Validation Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_number" class="form-label">ID Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="id_number" name="id_number" required>
+                                <small class="form-text text-muted">National ID or Birth Certificate Number</small>
+                                <div id="id_validation_feedback" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="phone_number" name="phone_number" required>
+                                <small class="form-text text-muted">Format: +254XXXXXXXXX or 07XXXXXXXX</small>
+                                <div id="phone_validation_feedback" class="mt-1"></div>
+                            </div>
+                        </div>
+
+                        <!-- Location Information -->
+                        <h5 class="mb-3 mt-4">Location Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="village" class="form-label">Village <span class="text-danger">*</span></label>
+                                <select class="form-select" id="village" name="village" required>
+                                    <option value="">-- Select Village --</option>
+                                    {% for village in villages %}
+                                    <option value="{{ village.id }}">{{ village.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="program" class="form-label">Program <span class="text-danger">*</span></label>
+                                <select class="form-select" id="program" name="program" required>
+                                    <option value="">-- Select Program --</option>
+                                    {% for program in programs %}
+                                    <option value="{{ program.id }}">{{ program.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <h5 class="mb-3 mt-4">Additional Information (Optional)</h5>
+                        <div class="mb-3">
+                            <label for="additional_notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="additional_notes" name="additional_notes" rows="3"></textarea>
+                        </div>
+
+                        <input type="hidden" name="application_data" id="application_data" value="{}">
+
+                        <!-- Submit Button -->
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-save"></i> Submit Application
+                            </button>
+                            <a href="{% url 'enrollment:application_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Instructions -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Required Information:</h6>
+                    <ul class="small">
+                        <li>Applicant's full name</li>
+                        <li>Valid Kenya ID or Birth Certificate number</li>
+                        <li>Valid Kenya phone number</li>
+                        <li>Village location</li>
+                        <li>Target program</li>
+                    </ul>
+
+                    <h6 class="mt-3">ID Number Format:</h6>
+                    <ul class="small">
+                        <li>National ID: 8 digits</li>
+                        <li>Birth Certificate: 6+ characters</li>
+                    </ul>
+
+                    <h6 class="mt-3">Phone Number Format:</h6>
+                    <ul class="small">
+                        <li>+254XXXXXXXXX (with country code)</li>
+                        <li>07XXXXXXXX (local format)</li>
+                        <li>01XXXXXXXX (landline format)</li>
+                    </ul>
+
+                    <div class="alert alert-warning small mt-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> The ID number and phone number will be validated against existing records.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Real-time ID number validation
+document.getElementById('id_number').addEventListener('blur', function() {
+    const idNumber = this.value;
+    if (!idNumber) return;
+
+    fetch(`{% url 'enrollment:validate_id' %}?id_number=${encodeURIComponent(idNumber)}`)
+        .then(response => response.json())
+        .then(data => {
+            const feedback = document.getElementById('id_validation_feedback');
+            if (data.valid) {
+                feedback.innerHTML = '<small class="text-success"><i class="fas fa-check-circle"></i> ' + data.message + '</small>';
+                document.getElementById('id_number').classList.remove('is-invalid');
+                document.getElementById('id_number').classList.add('is-valid');
+            } else {
+                feedback.innerHTML = '<small class="text-danger"><i class="fas fa-times-circle"></i> ' + data.message + '</small>';
+                document.getElementById('id_number').classList.remove('is-valid');
+                document.getElementById('id_number').classList.add('is-invalid');
+            }
+        });
+});
+
+// Real-time phone number validation
+document.getElementById('phone_number').addEventListener('blur', function() {
+    const phoneNumber = this.value;
+    if (!phoneNumber) return;
+
+    fetch(`{% url 'enrollment:validate_phone' %}?phone_number=${encodeURIComponent(phoneNumber)}`)
+        .then(response => response.json())
+        .then(data => {
+            const feedback = document.getElementById('phone_validation_feedback');
+            if (data.valid) {
+                feedback.innerHTML = '<small class="text-success"><i class="fas fa-check-circle"></i> ' + data.message + '</small>';
+                document.getElementById('phone_number').classList.remove('is-invalid');
+                document.getElementById('phone_number').classList.add('is-valid');
+            } else {
+                feedback.innerHTML = '<small class="text-danger"><i class="fas fa-times-circle"></i> ' + data.message + '</small>';
+                document.getElementById('phone_number').classList.remove('is-valid');
+                document.getElementById('phone_number').classList.add('is-invalid');
+            }
+        });
+});
+
+// Form submission
+document.getElementById('applicationForm').addEventListener('submit', function(e) {
+    // Compile additional data
+    const additionalData = {
+        notes: document.getElementById('additional_notes').value
+    };
+    document.getElementById('application_data').value = JSON.stringify(additionalData);
+});
+</script>
+{% endblock %}

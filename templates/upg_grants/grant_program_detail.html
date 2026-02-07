@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="{% url 'upg_grants:grant_program_list' %}">Grant Programs</a></li>
+                            <li class="breadcrumb-item active">{{ grant_program.name }}</li>
+                        </ol>
+                    </nav>
+                    <h2><i class="fas fa-hand-holding-usd"></i> {{ grant_program.name }}</h2>
+                </div>
+                <div>
+                    <a href="{% url 'upg_grants:grant_program_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                    {% if can_assign_mentors %}
+                    <a href="{% url 'upg_grants:grant_assign_mentors' grant_program.id %}" class="btn btn-primary ms-2">
+                        <i class="fas fa-user-plus"></i> Assign Mentors
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grant Program Details -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Program Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Grant Type:</strong><br>
+                            <span class="badge bg-info">{{ grant_program.get_grant_type_display }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Status:</strong><br>
+                            <span class="badge bg-{% if grant_program.status == 'active' %}success{% elif grant_program.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                {{ grant_program.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Associated Program:</strong><br>
+                            {{ grant_program.program.name|default:"No program linked" }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Created By:</strong><br>
+                            {{ grant_program.created_by.get_full_name|default:"N/A" }}
+                        </div>
+                    </div>
+
+                    {% if grant_program.description %}
+                    <div class="mb-3">
+                        <strong>Description:</strong>
+                        <p class="text-muted">{{ grant_program.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-coins"></i> Budget Info</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Total Budget:</strong><br>
+                        <span class="fs-4 text-success">KES {{ grant_program.total_budget|floatformat:0 }}</span>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Min Amount:</strong><br>
+                            KES {{ grant_program.min_amount_per_beneficiary|floatformat:0 }}
+                        </div>
+                        <div class="col-6">
+                            <strong>Max Amount:</strong><br>
+                            KES {{ grant_program.max_amount_per_beneficiary|floatformat:0 }}
+                        </div>
+                    </div>
+                    {% if grant_program.application_start_date or grant_program.application_end_date %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Start Date:</strong><br>
+                            {{ grant_program.application_start_date|date:"M d, Y"|default:"Not set" }}
+                        </div>
+                        <div class="col-6">
+                            <strong>End Date:</strong><br>
+                            {{ grant_program.application_end_date|date:"M d, Y"|default:"Not set" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Field Associate Assignments -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-tie"></i> Assigned Field Associates</h5>
+                    <span class="badge bg-primary">{{ fa_assignments|length }} FA(s)</span>
+                </div>
+                <div class="card-body">
+                    {% if fa_assignments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Field Associate</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Assigned By</th>
+                                    <th>Assigned At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fa in fa_assignments %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-user-tie text-primary me-2"></i>
+                                        {{ fa.field_associate.get_full_name }}
+                                    </td>
+                                    <td>{{ fa.field_associate.email|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if fa.status == 'accepted' %}success{% elif fa.status == 'declined' %}danger{% else %}warning{% endif %}">
+                                            {{ fa.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ fa.assigned_by.get_full_name|default:"System" }}</td>
+                                    <td>{{ fa.assigned_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'upg_grants:grant_assign_mentors' grant_program.id %}"
+                                           class="btn btn-sm btn-outline-success" title="View/Assign Mentors">
+                                            <i class="fas fa-users"></i> Mentors
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-slash fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No field associates assigned to this grant program yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Applications -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice-dollar"></i> Related Applications</h5>
+                    <span class="badge bg-info">{{ applications|length }} Application(s)</span>
+                </div>
+                <div class="card-body">
+                    {% if applications %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Household</th>
+                                    <th>Status</th>
+                                    <th>Requested Amount</th>
+                                    <th>Submitted By</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in applications %}
+                                <tr>
+                                    <td>{{ app.title }}</td>
+                                    <td>{{ app.household.name|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if app.status == 'approved' or app.status == 'disbursed' %}success{% elif app.status == 'rejected' %}danger{% elif app.status == 'under_review' %}primary{% else %}warning{% endif %}">
+                                            {{ app.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>KES {{ app.requested_amount|floatformat:0 }}</td>
+                                    <td>{{ app.submitted_by.get_full_name|default:"N/A" }}</td>
+                                    <td>{{ app.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'upg_grants:application_detail' app.id %}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-invoice fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No applications submitted for this grant program yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

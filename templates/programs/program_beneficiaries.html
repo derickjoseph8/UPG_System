@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-users"></i> {{ page_title }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'programs:program_list' %}">Programs</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'programs:program_detail' program.pk %}">{{ program.name }}</a></li>
+                <li class="breadcrumb-item active">Beneficiaries</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        {% if can_enroll %}
+        <a href="{% url 'programs:enroll_households' program.pk %}" class="btn btn-success">
+            <i class="fas fa-user-plus"></i> Enroll Households
+        </a>
+        {% endif %}
+        <a href="{% url 'programs:program_detail' program.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Program
+        </a>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h3 class="text-primary">{{ total_beneficiaries }}</h3>
+                <p class="text-muted mb-0">Total Enrolled</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h3 class="text-success">{{ active_beneficiaries }}</h3>
+                <p class="text-muted mb-0">Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h3 class="text-info">{{ graduated_beneficiaries }}</h3>
+                <p class="text-muted mb-0">Graduated</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-secondary">
+            <div class="card-body text-center">
+                <h3 class="text-secondary">{{ program.target_beneficiaries }}</h3>
+                <p class="text-muted mb-0">Target</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Beneficiaries List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Enrolled Households</h5>
+        <div>
+            <input type="text" class="form-control form-control-sm" id="search-beneficiaries" placeholder="Search...">
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if beneficiaries %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="beneficiaries-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Household</th>
+                        <th>Village</th>
+                        <th>Phone</th>
+                        <th>Enrollment Date</th>
+                        <th>Status</th>
+                        {% if user.is_superuser or user.role == 'ict_admin' or user.role == 'program_manager' %}
+                        <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for beneficiary in beneficiaries %}
+                    <tr data-search="{{ beneficiary.household.name|lower }} {{ beneficiary.household.village.name|lower }}">
+                        <td>
+                            <strong>{{ beneficiary.household.name }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-map-marker-alt"></i> {{ beneficiary.household.village.name }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if beneficiary.household.phone_number %}
+                            <small><i class="fas fa-phone"></i> {{ beneficiary.household.phone_number }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ beneficiary.enrollment_date|date:"M d, Y" }}</td>
+                        <td>
+                            <span class="badge bg-{% if beneficiary.participation_status == 'active' %}success{% elif beneficiary.participation_status == 'graduated' %}info{% elif beneficiary.participation_status == 'dropped_out' %}danger{% else %}secondary{% endif %}">
+                                {{ beneficiary.get_participation_status_display }}
+                            </span>
+                        </td>
+                        {% if user.is_superuser or user.role == 'ict_admin' or user.role == 'program_manager' %}
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'households:household_detail' beneficiary.household.id %}">
+                                            <i class="fas fa-eye me-2"></i>View Household
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger remove-beneficiary" href="#" data-id="{{ beneficiary.id }}">
+                                            <i class="fas fa-trash me-2"></i>Remove
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users text-muted" style="font-size: 4rem;"></i>
+            <h4 class="text-muted mt-3">No Beneficiaries Yet</h4>
+            <p class="text-muted">No households have been enrolled in this program yet.</p>
+            {% if can_enroll %}
+            <a href="{% url 'programs:enroll_households' program.pk %}" class="btn btn-success">
+                <i class="fas fa-user-plus"></i> Enroll Households
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    document.getElementById('search-beneficiaries').addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        document.querySelectorAll('#beneficiaries-table tbody tr').forEach(function(row) {
+            const searchText = row.dataset.search || '';
+            row.style.display = searchText.includes(query) ? '' : 'none';
+        });
+    });
+
+    // Remove beneficiary
+    document.querySelectorAll('.remove-beneficiary').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Remove this household from the program?')) {
+                const beneficiaryId = this.dataset.id;
+                fetch('/programs/beneficiary/' + beneficiaryId + '/remove/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -48,7 +48,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="role" class="form-label">User Role</label>
-                            <select class="form-select" id="role" name="role">
+                            <select class="form-select" id="role" name="role" onchange="toggleAssignmentFields()">
                                 {% for value, label in role_choices %}
                                 <option value="{{ value }}" {% if user_obj.role == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
@@ -59,6 +59,59 @@
                             <label for="password" class="form-label">New Password</label>
                             <input type="password" class="form-control" id="password" name="password" minlength="8">
                             <div class="form-text">Leave blank to keep current password</div>
+                        </div>
+                    </div>
+
+                    <!-- Supervisor Assignment (for Mentors) -->
+                    <div class="row" id="supervisor-section" style="{% if user_obj.role != 'mentor' %}display: none;{% endif %}">
+                        <div class="col-md-12 mb-3">
+                            <label for="supervisor" class="form-label">
+                                <i class="fas fa-user-tie text-success"></i> Supervising Field Associate
+                            </label>
+                            <select class="form-select" id="supervisor" name="supervisor">
+                                <option value="">-- Select Field Associate --</option>
+                                {% for fa in field_associates %}
+                                <option value="{{ fa.id }}" {% if user_profile and user_profile.supervisor_id == fa.id %}selected{% endif %}>
+                                    {{ fa.get_full_name|default:fa.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Assign a Field Associate to supervise this mentor</div>
+                        </div>
+                    </div>
+
+                    <!-- Supervised Mentors (for Field Associates) -->
+                    <div class="row" id="mentors-section" style="{% if user_obj.role != 'field_associate' %}display: none;{% endif %}">
+                        <div class="col-md-12 mb-3">
+                            <label for="supervised_mentors" class="form-label">
+                                <i class="fas fa-users text-primary"></i> Supervised Mentors
+                            </label>
+                            <select class="form-select" id="supervised_mentors" name="supervised_mentors" multiple size="8">
+                                {% for mentor in all_mentors %}
+                                <option value="{{ mentor.id }}" {% if mentor.id in supervised_mentor_ids %}selected{% endif %}>
+                                    {{ mentor.get_full_name|default:mentor.username }}
+                                    {% if mentor.profile.assigned_villages.exists %}({{ mentor.profile.assigned_villages.count }} villages){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple mentors to supervise</div>
+                        </div>
+                    </div>
+
+                    <!-- Village Assignments (for Mentors and Field Associates) -->
+                    <div class="row" id="villages-section" style="{% if user_obj.role not in 'mentor,field_associate' %}display: none;{% endif %}">
+                        <div class="col-md-12 mb-3">
+                            <label for="assigned_villages" class="form-label">
+                                <i class="fas fa-map-marker-alt text-success"></i> Assigned Villages
+                            </label>
+                            <select class="form-select" id="assigned_villages" name="assigned_villages" multiple size="8">
+                                {% for village in villages %}
+                                <option value="{{ village.id }}" {% if village.id in assigned_village_ids %}selected{% endif %}>
+                                    {{ village.name }} ({{ village.subcounty_obj.name|default:"Unknown" }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple villages</div>
                         </div>
                     </div>
 
@@ -176,6 +229,84 @@
                 </div>
             </div>
         </div>
+
+        <!-- Current Assignments Info -->
+        {% if user_obj.role == 'mentor' or user_obj.role == 'field_associate' %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-tasks"></i> Current Assignments</h6>
+            </div>
+            <div class="card-body">
+                {% if user_profile %}
+                    {% if user_obj.role == 'mentor' and user_profile.supervisor %}
+                    <p><strong>Supervisor:</strong><br>
+                        <i class="fas fa-user-tie text-success"></i>
+                        {{ user_profile.supervisor.get_full_name|default:user_profile.supervisor.username }}
+                    </p>
+                    {% endif %}
+
+                    {% if user_obj.role == 'field_associate' %}
+                    <p><strong>Supervised Mentors ({{ supervised_mentors_count|default:0 }}):</strong></p>
+                    {% if supervised_mentors_list %}
+                    <ul class="list-unstyled small">
+                        {% for m in supervised_mentors_list %}
+                        <li><i class="fas fa-user text-primary"></i> {{ m.get_full_name|default:m.username }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted small">No mentors supervised</p>
+                    {% endif %}
+                    {% endif %}
+
+                    <p><strong>Villages ({{ user_profile.assigned_villages.count }}):</strong></p>
+                    {% if user_profile.assigned_villages.exists %}
+                    <ul class="list-unstyled small">
+                        {% for v in user_profile.assigned_villages.all %}
+                        <li><i class="fas fa-map-marker-alt text-success"></i> {{ v.name }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted small">No villages assigned</p>
+                    {% endif %}
+                {% else %}
+                <p class="text-muted small">No profile data</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<script>
+function toggleAssignmentFields() {
+    const role = document.getElementById('role').value;
+    const supervisorSection = document.getElementById('supervisor-section');
+    const mentorsSection = document.getElementById('mentors-section');
+    const villagesSection = document.getElementById('villages-section');
+
+    // Supervisor field only for mentors
+    if (role === 'mentor') {
+        supervisorSection.style.display = 'block';
+    } else {
+        supervisorSection.style.display = 'none';
+    }
+
+    // Supervised mentors field only for field associates
+    if (role === 'field_associate') {
+        mentorsSection.style.display = 'block';
+    } else {
+        mentorsSection.style.display = 'none';
+    }
+
+    // Villages for mentors and field associates
+    if (role === 'mentor' || role === 'field_associate') {
+        villagesSection.style.display = 'block';
+    } else {
+        villagesSection.style.display = 'none';
+    }
+}
+
+// Run on page load
+document.addEventListener('DOMContentLoaded', toggleAssignmentFields);
+</script>
 {% endblock %}

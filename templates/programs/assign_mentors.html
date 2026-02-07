@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-user-plus"></i> {{ page_title }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'programs:program_list' %}">Programs</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'programs:program_detail' program.pk %}">{{ program.name }}</a></li>
+                <li class="breadcrumb-item active">Assign Mentors</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <a href="{% url 'programs:program_detail' program.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Program
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Program Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>{{ program.name }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Type:</strong> {{ program.get_program_type_display }}</p>
+                        <p><strong>Status:</strong> <span class="badge bg-{{ program.status }}">{{ program.get_status_display }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Target Beneficiaries:</strong> {{ program.target_beneficiaries }}</p>
+                        <p><strong>Created by:</strong> {{ program.created_by.get_full_name }}</p>
+                    </div>
+                </div>
+                {% if program.description %}
+                <p class="text-muted mb-0">{{ program.description|truncatewords:50 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if fa_assignment or is_admin %}
+        <!-- Assign Mentors Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Assign Mentors to Program</h5>
+            </div>
+            <div class="card-body">
+                {% if available_mentors %}
+                <form method="post">
+                    {% csrf_token %}
+                    <p class="text-muted">Select mentors from your team to assign to this program.</p>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="select_all_mentors" name="select_all_mentors">
+                        <label class="form-check-label fw-bold" for="select_all_mentors">
+                            Select All Mentors ({{ available_mentors|length }})
+                        </label>
+                    </div>
+
+                    <div id="mentor-checkboxes" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                        {% for mentor in available_mentors %}
+                        <div class="form-check">
+                            <input class="form-check-input mentor-checkbox" type="checkbox"
+                                   name="mentors[]" value="{{ mentor.id }}" id="mentor-{{ mentor.id }}"
+                                   {% if mentor.id in assigned_mentor_ids %}checked disabled{% endif %}>
+                            <label class="form-check-label {% if mentor.id in assigned_mentor_ids %}text-muted{% endif %}" for="mentor-{{ mentor.id }}">
+                                {{ mentor.get_full_name }}
+                                {% if mentor.id in assigned_mentor_ids %}
+                                <span class="badge bg-success ms-2">Already Assigned</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Assign Selected Mentors
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No mentors available to assign. Make sure you have mentors supervised by you.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Currently Assigned Mentors -->
+        {% if fa_assignment and fa_assignment.mentor_assignments.exists %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Your Assigned Mentors ({{ fa_assignment.mentor_count }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mentor</th>
+                            <th>Assigned On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in fa_assignment.mentor_assignments.all %}
+                        <tr>
+                            <td>
+                                <strong>{{ assignment.mentor.get_full_name }}</strong>
+                                {% if assignment.mentor.email %}
+                                <br><small class="text-muted">{{ assignment.mentor.email }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ assignment.assigned_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger remove-mentor" data-id="{{ assignment.id }}">
+                                    <i class="fas fa-times"></i> Remove
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            You are not assigned to this program. Please contact the Program Manager.
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- Status Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Assignment Status</h6>
+            </div>
+            <div class="card-body">
+                {% if fa_assignment %}
+                <p><strong>Your Status:</strong>
+                    <span class="badge bg-{% if fa_assignment.status == 'pending' %}warning{% elif fa_assignment.status == 'assigned' %}success{% else %}secondary{% endif %}">
+                        {{ fa_assignment.get_status_display }}
+                    </span>
+                </p>
+                <p><strong>Assigned By:</strong> {{ fa_assignment.assigned_by.get_full_name }}</p>
+                <p><strong>Assigned On:</strong> {{ fa_assignment.assigned_at|date:"M d, Y" }}</p>
+                <p><strong>Mentors Assigned:</strong> {{ fa_assignment.mentor_count }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- All FA Assignments (Admin View) -->
+        {% if is_admin and all_fa_assignments %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-user-tie"></i> All Field Associates</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for pfa in all_fa_assignments %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ pfa.field_associate.get_full_name }}</strong>
+                            <br><small class="text-muted">{{ pfa.mentor_count }} mentor(s)</small>
+                        </div>
+                        <span class="badge bg-{% if pfa.status == 'pending' %}warning{% elif pfa.status == 'assigned' %}success{% else %}secondary{% endif %}">
+                            {{ pfa.get_status_display }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Instructions</h6>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0 ps-3">
+                    <li>Select mentors from your supervised team</li>
+                    <li>Click "Assign Selected Mentors"</li>
+                    <li>Assigned mentors will be able to work on this program</li>
+                    <li>You can remove mentors if needed</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select All Mentors
+    const selectAll = document.getElementById('select_all_mentors');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            document.querySelectorAll('.mentor-checkbox:not(:disabled)').forEach(function(cb) {
+                cb.checked = selectAll.checked;
+            });
+        });
+    }
+
+    // Remove Mentor
+    document.querySelectorAll('.remove-mentor').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (confirm('Remove this mentor from the program?')) {
+                const assignmentId = this.dataset.id;
+                fetch('/programs/mentor-assignment/' + assignmentId + '/remove/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

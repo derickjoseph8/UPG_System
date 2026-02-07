@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-satellite-dish"></i> KoboToolbox Integration Settings</h2>
+                    <p class="text-muted">Configure API credentials for KoboToolbox integration</p>
+                </div>
+                <div>
+                    <a href="{% url 'core:kobo_export_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Export Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            {% if current_settings.token_configured %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <strong>API Token Configured</strong> -
+                KoboToolbox integration is ready. Use the "Test Connection" button to verify.
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> <strong>API Token Not Configured</strong> -
+                Please enter your KoboToolbox API token below to enable integration.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- API Configuration Instructions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> How to Get Your API Token</h5>
+                <ol class="mb-0">
+                    <li>Go to <a href="https://kf.kobotoolbox.org" target="_blank" class="alert-link">https://kf.kobotoolbox.org</a> and log in</li>
+                    <li>Click on your username (top right) &rarr; <strong>Account Settings</strong></li>
+                    <li>Navigate to <strong>Security</strong> tab</li>
+                    <li>Find <strong>API Key</strong> section and copy your token</li>
+                    <li>Paste it in the form below and click Save</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Form -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> API Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save">
+
+                        <!-- Enable/Disable -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="kobo_enabled"
+                                       name="kobo_enabled" {% if current_settings.enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="kobo_enabled">
+                                    Enable KoboToolbox Integration
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">Turn on to allow form syncing with KoboToolbox</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- API URL -->
+                        <div class="mb-4">
+                            <label for="kobo_api_url" class="form-label">
+                                <i class="fas fa-link"></i> KoboToolbox API URL
+                            </label>
+                            <input type="url" class="form-control" id="kobo_api_url" name="kobo_api_url"
+                                   value="{{ current_settings.api_url }}" required>
+                            <small class="form-text text-muted">
+                                Default: https://kf.kobotoolbox.org/api/v2 (Change only if using self-hosted Kobo)
+                            </small>
+                        </div>
+
+                        <!-- Base URL -->
+                        <div class="mb-4">
+                            <label for="kobo_base_url" class="form-label">
+                                <i class="fas fa-globe"></i> KoboToolbox Base URL
+                            </label>
+                            <input type="url" class="form-control" id="kobo_base_url" name="kobo_base_url"
+                                   value="{{ current_settings.base_url }}" required>
+                            <small class="form-text text-muted">
+                                Default: https://kf.kobotoolbox.org (Used for generating form links)
+                            </small>
+                        </div>
+
+                        <!-- API Token -->
+                        <div class="mb-4">
+                            <label for="kobo_api_token" class="form-label">
+                                <i class="fas fa-key"></i> API Token <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="kobo_api_token" name="kobo_api_token"
+                                       value="{{ current_settings.token }}" placeholder="Enter your KoboToolbox API token">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('kobo_api_token')">
+                                    <i class="fas fa-eye" id="kobo_api_token_icon"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Your API token from KoboToolbox Account Settings > Security
+                            </small>
+                        </div>
+
+                        <!-- Webhook Secret (Optional) -->
+                        <div class="mb-4">
+                            <label for="kobo_webhook_secret" class="form-label">
+                                <i class="fas fa-lock"></i> Webhook Secret (Optional)
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="kobo_webhook_secret" name="kobo_webhook_secret"
+                                       value="{{ current_settings.webhook_secret }}" placeholder="Optional: For webhook signature validation">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('kobo_webhook_secret')">
+                                    <i class="fas fa-eye" id="kobo_webhook_secret_icon"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Used to validate incoming webhook requests (leave empty if not using webhooks)
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                            <button type="submit" class="btn btn-outline-success" name="action" value="test">
+                                <i class="fas fa-plug"></i> Test Connection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with Additional Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> About KoboToolbox</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small"><strong>What is KoboToolbox?</strong></p>
+                    <p class="small">KoboToolbox is a free, open-source platform for mobile data collection. It allows field staff to collect data offline using mobile devices.</p>
+
+                    <hr>
+
+                    <p class="small"><strong>Features:</strong></p>
+                    <ul class="small">
+                        <li>Offline data collection</li>
+                        <li>GPS location capture</li>
+                        <li>Photo/audio/video capture</li>
+                        <li>Automatic sync to UPG MIS</li>
+                        <li>Works on Android devices</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-link"></i> Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <a href="{% url 'forms:dashboard' %}" class="text-decoration-none">
+                                <i class="fas fa-wpforms"></i> Dynamic Forms Dashboard
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="{% url 'forms:template_create' %}" class="text-decoration-none">
+                                <i class="fas fa-plus"></i> Create New Form
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="{% url 'forms:kobo_webhook_logs' %}" class="text-decoration-none">
+                                <i class="fas fa-history"></i> Webhook Logs
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="{% url 'core:kobo_export_dashboard' %}" class="text-decoration-none">
+                                <i class="fas fa-download"></i> Export Reference Data
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Security Note</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-0">
+                        <strong>Keep your API token secure!</strong><br>
+                        Never share it publicly or include it in code repositories.
+                        If you suspect your token has been compromised, regenerate it in KoboToolbox immediately.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(fieldId + '_icon');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

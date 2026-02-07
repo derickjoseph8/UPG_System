@@ -1,0 +1,74 @@
+{# Data Quality Widget #}
+{# Usage: {% include 'includes/data_quality_widget.html' with quality=data_quality %} #}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center bg-white">
+        <h5 class="mb-0">
+            <i class="fas fa-clipboard-check me-2"></i>Data Quality
+        </h5>
+        {% if quality.quality_score is not None %}
+        <span class="badge fs-6
+            {% if quality.quality_score >= 80 %}bg-success
+            {% elif quality.quality_score >= 60 %}bg-warning text-dark
+            {% else %}bg-danger{% endif %}">
+            {{ quality.quality_score }}%
+        </span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if quality.quality_score is not None %}
+        <div class="progress mb-3" style="height: 10px;">
+            <div class="progress-bar
+                {% if quality.quality_score >= 80 %}bg-success
+                {% elif quality.quality_score >= 60 %}bg-warning
+                {% else %}bg-danger{% endif %}"
+                role="progressbar"
+                style="width: {{ quality.quality_score }}%"
+                aria-valuenow="{{ quality.quality_score }}"
+                aria-valuemin="0"
+                aria-valuemax="100">
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between text-muted small mb-3">
+            <span><i class="fas fa-database me-1"></i> {{ quality.total_records|default:0 }} records</span>
+            <span><i class="fas fa-exclamation-triangle me-1"></i> {{ quality.issues_count|default:0 }} issues</span>
+        </div>
+
+        {% if quality.issues %}
+        <h6 class="mb-2 text-muted">Issues Found</h6>
+        <ul class="list-group list-group-flush">
+            {% for issue in quality.issues %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                <div>
+                    <span class="badge me-2
+                        {% if issue.severity == 'high' %}bg-danger
+                        {% elif issue.severity == 'medium' %}bg-warning text-dark
+                        {% else %}bg-secondary{% endif %}">
+                        {{ issue.severity|upper }}
+                    </span>
+                    <strong>{{ issue.field }}:</strong> {{ issue.count }} records
+                </div>
+                <span class="text-muted small">{{ issue.percentage }}%</span>
+            </li>
+            {% endfor %}
+        </ul>
+
+        {% if quality.issues.0.recommendation %}
+        <div class="mt-3 p-2 bg-light rounded">
+            <small class="text-muted">
+                <i class="fas fa-lightbulb text-warning me-1"></i>
+                <strong>Tip:</strong> {{ quality.issues.0.recommendation }}
+            </small>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center text-success py-4">
+            <i class="fas fa-check-circle fa-3x mb-2"></i>
+            <p class="mb-0 fw-medium">All records are complete!</p>
+            <small class="text-muted">Great job maintaining data quality.</small>
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_list' %}">Savings Groups</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_group_detail' savings_group.pk %}">{{ savings_group.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:loan_list' savings_group.pk %}">Loans</a></li>
+            <li class="breadcrumb-item active">Loan Details</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Loan Information -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-file-invoice-dollar"></i> Loan Details</h5>
+                    <span class="badge bg-{% if loan.status == 'fully_repaid' %}success{% elif loan.status == 'disbursed' %}primary{% elif loan.status == 'partially_repaid' %}warning{% elif loan.status == 'pending' %}info{% elif loan.status == 'rejected' or loan.status == 'defaulted' %}danger{% else %}secondary{% endif %} fs-6">
+                        {{ loan.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Member:</strong> {{ loan.member.household }}</p>
+                            <p><strong>Loan Amount:</strong> KES {{ loan.loan_amount|floatformat:2 }}</p>
+                            <p><strong>Interest Rate:</strong> {{ loan.interest_rate }}%</p>
+                            <p><strong>Total Due:</strong> <span class="text-danger">KES {{ loan.total_due|floatformat:2 }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Loan Date:</strong> {{ loan.loan_date|date:"M d, Y" }}</p>
+                            <p><strong>Due Date:</strong> {{ loan.due_date|date:"M d, Y" }}
+                                {% if loan.is_overdue %}<span class="badge bg-danger">Overdue</span>{% endif %}
+                            </p>
+                            <p><strong>Amount Repaid:</strong> <span class="text-success">KES {{ loan.amount_repaid|floatformat:2 }}</span></p>
+                            <p><strong>Balance:</strong> <span class="{% if loan.balance > 0 %}text-danger{% else %}text-success{% endif %}">KES {{ loan.balance|floatformat:2 }}</span></p>
+                        </div>
+                    </div>
+
+                    {% if loan.purpose %}
+                    <hr>
+                    <p><strong>Purpose:</strong><br>{{ loan.purpose }}</p>
+                    {% endif %}
+
+                    {% if loan.approved_by %}
+                    <hr>
+                    <p><strong>Approved By:</strong> {{ loan.approved_by.get_full_name|default:loan.approved_by.username }}</p>
+                    <p><strong>Approved Date:</strong> {{ loan.approved_date|date:"M d, Y" }}</p>
+                    {% endif %}
+
+                    <!-- Repayment Progress -->
+                    <hr>
+                    <h6>Repayment Progress</h6>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ loan.repayment_percentage }}%;">
+                            {{ loan.repayment_percentage }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">KES {{ loan.amount_repaid|floatformat:2 }} of KES {{ loan.total_due|floatformat:2 }} repaid</small>
+                </div>
+            </div>
+
+            <!-- Repayment History -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-history"></i> Repayment History</h5>
+                    {% if loan.status in 'disbursed,partially_repaid' %}
+                    <a href="{% url 'savings_groups:record_repayment' savings_group.pk loan.pk %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus"></i> Record Repayment
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if repayments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Recorded By</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for repayment in repayments %}
+                                <tr>
+                                    <td>{{ repayment.repayment_date|date:"M d, Y" }}</td>
+                                    <td class="text-success">KES {{ repayment.amount|floatformat:2 }}</td>
+                                    <td>{{ repayment.recorded_by.get_full_name|default:repayment.recorded_by.username|default:"N/A" }}</td>
+                                    <td>{{ repayment.notes|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No repayments recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-bolt"></i> Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if loan.status in 'disbursed,partially_repaid' %}
+                        <a href="{% url 'savings_groups:record_repayment' savings_group.pk loan.pk %}" class="btn btn-success">
+                            <i class="fas fa-coins"></i> Record Repayment
+                        </a>
+                        {% endif %}
+                        {% if loan.status == 'pending' and user.role in 'program_manager,ict_admin' or user.is_superuser %}
+                        <a href="{% url 'savings_groups:approve_loan' savings_group.pk loan.pk %}" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Approve/Reject
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'savings_groups:loan_list' savings_group.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Loans
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Member Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-user"></i> Member Info</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Household:</strong><br>{{ loan.member.household }}</p>
+                    <p><strong>Role:</strong> {{ loan.member.get_role_display }}</p>
+                    <p><strong>Total Savings:</strong><br>KES {{ loan.member.total_savings|floatformat:2 }}</p>
+                    <p><strong>Joined:</strong> {{ loan.member.joined_date|date:"M d, Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

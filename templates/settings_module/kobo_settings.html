@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}KoboToolbox Settings - UPG MIS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .connection-status {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    .connection-status.success {
+        background: #d1e7dd;
+        border: 1px solid #badbcc;
+        color: #0f5132;
+    }
+    .connection-status.error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #842029;
+    }
+    .connection-status.testing {
+        background: #fff3cd;
+        border: 1px solid #ffecb5;
+        color: #856404;
+    }
+    .sync-stats-card {
+        border-left: 4px solid #0d6efd;
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+    .api-token-field {
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-satellite-dish"></i> KoboToolbox Integration Settings</h2>
+                    <p class="text-muted">Configure API credentials and sync settings for KoboToolbox</p>
+                </div>
+                <div>
+                    <a href="{% url 'settings:settings_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Status Alert -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div id="connectionStatus" class="connection-status">
+                <div class="d-flex align-items-center">
+                    <span id="statusIcon" class="me-3"></span>
+                    <div>
+                        <strong id="statusTitle"></strong>
+                        <p id="statusMessage" class="mb-0 small"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Configuration Instructions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> How to Get Your API Token</h5>
+                <ol class="mb-0">
+                    <li>Go to <a href="https://kf.kobotoolbox.org" target="_blank" class="alert-link">https://kf.kobotoolbox.org</a></li>
+                    <li>Click on your username (top right) &rarr; <strong>Account Settings</strong></li>
+                    <li>Navigate to <strong>Security</strong> &rarr; <strong>API Key</strong></li>
+                    <li>Copy your API token and paste it below</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> API Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="koboSettingsForm">
+                        {% csrf_token %}
+
+                        <!-- API URL -->
+                        <div class="mb-4">
+                            <label for="kobo_api_url" class="form-label">
+                                <i class="fas fa-link text-primary"></i> KoboToolbox API URL
+                            </label>
+                            <input type="text" class="form-control" id="kobo_api_url" name="kobo_api_url"
+                                   value="{{ current_config.kobo_api_url }}" required>
+                            <small class="form-text text-muted">
+                                Default: https://kf.kobotoolbox.org/api/v2 (Only change if using self-hosted Kobo)
+                            </small>
+                        </div>
+
+                        <!-- API Token -->
+                        <div class="mb-4">
+                            <label for="kobo_api_token" class="form-label">
+                                <i class="fas fa-key text-warning"></i> API Token <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control api-token-field" id="kobo_api_token" name="kobo_api_token"
+                                       value="{{ current_config.kobo_api_token }}" required
+                                       placeholder="Enter your KoboToolbox API token">
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                From your KoboToolbox Account Settings &rarr; Security &rarr; API Key
+                            </small>
+                        </div>
+
+                        <!-- Test Connection Button -->
+                        <div class="mb-4">
+                            <button type="button" class="btn btn-outline-success" id="testConnectionBtn" onclick="testConnection()">
+                                <i class="fas fa-plug"></i> Test Connection
+                            </button>
+                            <small class="text-muted ms-2">Verify your API credentials work correctly</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Webhook Secret (Optional) -->
+                        <div class="mb-4">
+                            <label for="kobo_webhook_secret" class="form-label">
+                                <i class="fas fa-lock text-secondary"></i> Webhook Secret Key (Optional)
+                            </label>
+                            <input type="password" class="form-control" id="kobo_webhook_secret" name="kobo_webhook_secret"
+                                   value="{{ current_config.kobo_webhook_secret }}"
+                                   placeholder="Optional secret for webhook signature validation">
+                            <small class="form-text text-muted">
+                                Used to validate incoming webhook requests from KoboToolbox
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3"><i class="fas fa-sync text-info"></i> Sync Settings</h5>
+
+                        <!-- Auto-sync on Activation -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="kobo_auto_sync_on_activation"
+                                       name="kobo_auto_sync_on_activation" value="true"
+                                       {% if current_config.kobo_auto_sync_on_activation == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="kobo_auto_sync_on_activation">
+                                    <strong>Auto-sync forms when activated</strong>
+                                    <br><small class="text-muted">Automatically sync forms to KoboToolbox when status changes to "Active"</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Allow New Households -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="kobo_allow_new_households"
+                                       name="kobo_allow_new_households" value="true"
+                                       {% if current_config.kobo_allow_new_households == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="kobo_allow_new_households">
+                                    <strong>Allow creating new households from submissions</strong>
+                                    <br><small class="text-muted">Allow Kobo submissions to create new household records in MIS</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                            <a href="{% url 'forms:template_list' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-file-alt"></i> Manage Forms
+                            </a>
+                            <a href="{% url 'forms:kobo_webhook_logs' %}" class="btn btn-outline-info">
+                                <i class="fas fa-history"></i> Webhook Logs
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Webhook URL Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-link"></i> Webhook Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">When syncing forms, the following webhook URL is automatically configured:</p>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                        <input type="text" class="form-control" id="webhookUrl"
+                               value="{{ request.scheme }}://{{ request.get_host }}/forms/kobo/webhook/" readonly>
+                        <button type="button" class="btn btn-outline-secondary" onclick="copyWebhookUrl()">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        This URL receives real-time submissions from KoboToolbox.
+                        Make sure your server is accessible from the internet for webhooks to work.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="card sync-stats-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Sync Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="stat-number" id="syncedFormsCount">--</div>
+                            <small class="text-muted">Forms Synced</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="stat-number" id="koboSubmissionsCount">--</div>
+                            <small class="text-muted">Kobo Submissions</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <a href="{% url 'forms:template_list' %}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-external-link-alt"></i> View All Forms
+                    </a>
+                </div>
+            </div>
+
+            <!-- About KoboToolbox -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> About KoboToolbox</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small"><strong>What is KoboToolbox?</strong></p>
+                    <p class="small">KoboToolbox is a free, open-source platform for mobile data collection, enabling offline surveys with automatic sync.</p>
+
+                    <hr>
+
+                    <p class="small mb-2"><strong>Integration Features:</strong></p>
+                    <ul class="small">
+                        <li><i class="fas fa-check text-success"></i> Offline data collection</li>
+                        <li><i class="fas fa-check text-success"></i> GPS location capture</li>
+                        <li><i class="fas fa-check text-success"></i> Photo/audio/video upload</li>
+                        <li><i class="fas fa-check text-success"></i> Real-time webhook sync</li>
+                        <li><i class="fas fa-check text-success"></i> MIS validation</li>
+                        <li><i class="fas fa-check text-success"></i> 27+ field types</li>
+                    </ul>
+
+                    <hr>
+
+                    <p class="small mb-2"><strong>Quick Links:</strong></p>
+                    <div class="d-grid gap-2">
+                        <a href="https://kf.kobotoolbox.org" target="_blank" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-external-link-alt"></i> KoboToolbox Dashboard
+                        </a>
+                        <a href="{% url 'forms:template_create' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Create New Form
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Warning -->
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-shield-alt"></i> Security Note</h6>
+                <p class="small mb-0">
+                    Keep your API token secure. Never share it publicly or commit it to version control.
+                    If compromised, regenerate it immediately from your KoboToolbox account.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    const tokenField = document.getElementById('kobo_api_token');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (tokenField.type === 'password') {
+        tokenField.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+    } else {
+        tokenField.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+    }
+}
+
+function copyWebhookUrl() {
+    const urlField = document.getElementById('webhookUrl');
+    urlField.select();
+    document.execCommand('copy');
+
+    // Show feedback
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-success');
+
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-secondary');
+    }, 2000);
+}
+
+function testConnection() {
+    const btn = document.getElementById('testConnectionBtn');
+    const statusDiv = document.getElementById('connectionStatus');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // Get current values from form
+    const apiUrl = document.getElementById('kobo_api_url').value;
+    const apiToken = document.getElementById('kobo_api_token').value;
+
+    if (!apiToken) {
+        showStatus('error', 'Missing API Token', 'Please enter your KoboToolbox API token first.');
+        return;
+    }
+
+    // Show testing state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+    showStatus('testing', 'Testing Connection...', 'Please wait while we verify your credentials.');
+
+    // Make test request
+    fetch('{% url "settings:kobo_test_connection" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            api_url: apiUrl,
+            api_token: apiToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showStatus('success', 'Connection Successful!', data.message);
+        } else {
+            showStatus('error', 'Connection Failed', data.message);
+        }
+    })
+    .catch(error => {
+        showStatus('error', 'Connection Error', 'Could not test connection. Please check your network.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plug"></i> Test Connection';
+    });
+}
+
+function showStatus(type, title, message) {
+    const statusDiv = document.getElementById('connectionStatus');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusMessage = document.getElementById('statusMessage');
+
+    statusDiv.className = 'connection-status ' + type;
+    statusDiv.style.display = 'block';
+
+    if (type === 'success') {
+        statusIcon.innerHTML = '<i class="fas fa-check-circle fa-2x text-success"></i>';
+    } else if (type === 'error') {
+        statusIcon.innerHTML = '<i class="fas fa-times-circle fa-2x text-danger"></i>';
+    } else {
+        statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x text-warning"></i>';
+    }
+
+    statusTitle.textContent = title;
+    statusMessage.textContent = message;
+
+    // Scroll to status
+    statusDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Load sync statistics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // You could make an AJAX call here to get real stats
+    // For now, we'll show placeholder values
+    fetch('/forms/api/stats/', { method: 'GET' })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('syncedFormsCount').textContent = data.synced_forms || '0';
+            document.getElementById('koboSubmissionsCount').textContent = data.kobo_submissions || '0';
+        })
+        .catch(() => {
+            // Fallback - just show zeros
+            document.getElementById('syncedFormsCount').textContent = '0';
+            document.getElementById('koboSubmissionsCount').textContent = '0';
+        });
+});
+</script>
+{% endblock %}

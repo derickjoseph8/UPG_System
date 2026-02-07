@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-user-shield"></i> {{ page_title }}</h1>
+        <p class="text-muted">Create and manage custom roles with specific permissions</p>
+    </div>
+    <div>
+        <a href="{% url 'settings:settings_dashboard' %}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left"></i> Back to Settings
+        </a>
+        <a href="{% url 'settings:custom_role_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Custom Role
+        </a>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="alert alert-info mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-info-circle fa-2x me-3"></i>
+        <div>
+            <strong>About Custom Roles</strong>
+            <p class="mb-0">Custom roles allow you to create specialized access levels beyond the built-in roles.
+            Assign specific permissions to each module and then assign users to these custom roles.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Roles Grid -->
+<div class="row">
+    {% for role in roles %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 {% if not role.is_active %}border-secondary{% else %}border-primary{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center {% if not role.is_active %}bg-secondary text-white{% else %}bg-primary text-white{% endif %}">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-tag me-2"></i>{{ role.name }}
+                </h5>
+                <span class="badge {% if role.is_active %}bg-success{% else %}bg-warning{% endif %}">
+                    {% if role.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted small">{{ role.description|default:"No description" }}</p>
+
+                <div class="mb-3">
+                    <strong class="d-block mb-2">Dashboard Type:</strong>
+                    <span class="badge bg-info">{{ role.get_dashboard_type_display }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong class="d-block mb-2">Permissions Summary:</strong>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for module_key, module_name in available_modules.items %}
+                            {% with level=role.permissions|default_if_none:''|dictsort:module_key %}
+                            <span class="badge
+                                {% if role.permissions %}
+                                    {% if module_key in role.permissions and role.permissions|get_item:module_key == 'full' %}bg-success
+                                    {% elif module_key in role.permissions and role.permissions|get_item:module_key == 'read' %}bg-warning text-dark
+                                    {% else %}bg-secondary{% endif %}
+                                {% else %}bg-secondary{% endif %}"
+                                title="{{ module_name }}">
+                                {{ module_key|truncatechars:8 }}
+                            </span>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <small class="text-muted mt-1 d-block">
+                        <span class="badge bg-success">Full</span>
+                        <span class="badge bg-warning text-dark">Read</span>
+                        <span class="badge bg-secondary">None</span>
+                    </small>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">
+                        <i class="fas fa-users"></i> {{ role.user_count }} user{{ role.user_count|pluralize }}
+                    </span>
+                    <small class="text-muted">
+                        Created: {{ role.created_at|date:"M d, Y" }}
+                    </small>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="btn-group w-100">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="viewRoleDetails({{ role.id }})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <a href="{% url 'settings:custom_role_edit' role.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                            onclick="confirmDelete({{ role.id }}, '{{ role.name|escapejs }}')"
+                            {% if role.user_count > 0 %}disabled title="Cannot delete - has assigned users"{% endif %}>
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-user-shield fa-4x text-muted mb-3"></i>
+                <h4>No Custom Roles Yet</h4>
+                <p class="text-muted">Create your first custom role to define specialized access levels.</p>
+                <a href="{% url 'settings:custom_role_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Custom Role
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Built-in Roles Reference -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Built-in Roles Reference</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">These are the built-in roles with predefined permissions. Custom roles can be used for more specific access control.</p>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Dashboard</th>
+                        <th>Full Access</th>
+                        <th>Read Access</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ICT Administrator</strong></td>
+                        <td>Admin</td>
+                        <td>All modules</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Program Manager</strong></td>
+                        <td>Admin</td>
+                        <td>Programs, Households, Business Groups, Savings, Surveys, Training, Grants, Reports</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>M&E Staff</strong></td>
+                        <td>M&E</td>
+                        <td>Programs, Households, Business Groups, Savings, Surveys, Training, Reports</td>
+                        <td>Grants</td>
+                    </tr>
+                    <tr>
+                        <td><strong>County Executive</strong></td>
+                        <td>Executive</td>
+                        <td>Dashboard, Grants, Reports</td>
+                        <td>Programs, Households, Business Groups, Savings, Training</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Field Associate</strong></td>
+                        <td>Field Associate</td>
+                        <td>Households, Business Groups, Savings, Surveys, Training, Grants</td>
+                        <td>Programs, Reports</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mentor</strong></td>
+                        <td>Mentor</td>
+                        <td>Households, Business Groups, Savings, Surveys, Training</td>
+                        <td>Programs, Reports</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Role Details Modal -->
+<div class="modal fade" id="roleDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-shield"></i> Role Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="roleDetailsContent">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x"></i>
+                    <p class="mt-3">Loading role details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the custom role "<strong id="deleteRoleName"></strong>"?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteRole()">
+                    <i class="fas fa-trash"></i> Delete Role
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let deleteRoleId = null;
+
+function viewRoleDetails(roleId) {
+    const modal = new bootstrap.Modal(document.getElementById('roleDetailsModal'));
+    modal.show();
+
+    fetch(`/settings/roles/${roleId}/detail/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const role = data.role;
+                let permissionsHtml = '';
+                role.permissions.forEach(p => {
+                    let badgeClass = 'bg-secondary';
+                    if (p.level === 'full') badgeClass = 'bg-success';
+                    else if (p.level === 'read') badgeClass = 'bg-warning text-dark';
+
+                    permissionsHtml += `
+                        <tr>
+                            <td>${p.module}</td>
+                            <td><span class="badge ${badgeClass}">${p.level_display}</span></td>
+                        </tr>
+                    `;
+                });
+
+                let usersHtml = '';
+                if (role.users.length > 0) {
+                    role.users.forEach(u => {
+                        usersHtml += `<li>${u.first_name} ${u.last_name} (${u.email})</li>`;
+                    });
+                } else {
+                    usersHtml = '<li class="text-muted">No users assigned</li>';
+                }
+
+                document.getElementById('roleDetailsContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>${role.name}</h5>
+                            <p class="text-muted">${role.description || 'No description'}</p>
+                            <table class="table table-sm">
+                                <tr><td><strong>Status:</strong></td><td>${role.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-warning">Inactive</span>'}</td></tr>
+                                <tr><td><strong>Dashboard:</strong></td><td>${role.dashboard_type}</td></tr>
+                                <tr><td><strong>Created by:</strong></td><td>${role.created_by}</td></tr>
+                                <tr><td><strong>Created:</strong></td><td>${role.created_at}</td></tr>
+                                <tr><td><strong>Last Updated:</strong></td><td>${role.updated_at}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Assigned Users (${role.user_count})</h6>
+                            <ul class="list-unstyled">${usersHtml}</ul>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Module Permissions</h6>
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>Module</th><th>Access Level</th></tr></thead>
+                        <tbody>${permissionsHtml}</tbody>
+                    </table>
+                `;
+            } else {
+                document.getElementById('roleDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">Error loading role details: ${data.message}</div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('roleDetailsContent').innerHTML = `
+                <div class="alert alert-danger">Error: ${error.message}</div>
+            `;
+        });
+}
+
+function confirmDelete(roleId, roleName) {
+    deleteRoleId = roleId;
+    document.getElementById('deleteRoleName').textContent = roleName;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function deleteRole() {
+    if (!deleteRoleId) return;
+
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
+    fetch(`/settings/roles/${deleteRoleId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash"></i> Delete Role';
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete Role';
+    });
+}
+</script>
+{% endblock %}

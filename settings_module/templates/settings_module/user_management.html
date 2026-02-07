@@ -74,9 +74,32 @@
                         </td>
                         <td>{{ user.email|default:'-' }}</td>
                         <td>
-                            <span class="badge bg-{% if user.role == 'ict_admin' %}danger{% elif user.role == 'county_executive' %}warning{% elif user.role == 'me_staff' %}info{% elif user.role == 'field_associate' %}success{% elif user.role == 'mentor' %}primary{% else %}secondary{% endif %}">
+                            <span class="badge bg-{% if user.role == 'ict_admin' %}danger{% elif user.role == 'county_executive' %}warning{% elif user.role == 'program_manager' %}purple{% elif user.role == 'me_staff' %}info{% elif user.role == 'field_associate' %}success{% elif user.role == 'mentor' %}primary{% else %}secondary{% endif %}">
                                 {{ user.get_role_display }}
                             </span>
+                            {% if user.role == 'mentor' %}
+                                {% if user.profile.supervisor %}
+                                <br><small class="text-muted">
+                                    <i class="fas fa-user-tie"></i> {{ user.profile.supervisor.get_full_name|default:user.profile.supervisor.username }}
+                                </small>
+                                {% endif %}
+                            {% endif %}
+                            {% if user.role == 'field_associate' %}
+                                {% with supervised_count=user.supervised_profiles.count %}
+                                {% if supervised_count > 0 %}
+                                <br><small class="text-primary">
+                                    <i class="fas fa-users"></i> {{ supervised_count }} mentors
+                                </small>
+                                {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                            {% if user.role == 'mentor' or user.role == 'field_associate' %}
+                                {% if user.profile.assigned_villages.exists %}
+                                <br><small class="text-success">
+                                    <i class="fas fa-map-marker-alt"></i> {{ user.profile.assigned_villages.count }} villages
+                                </small>
+                                {% endif %}
+                            {% endif %}
                         </td>
                         <td>
                             {% if user.is_active %}
@@ -209,12 +232,12 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    {% for value, label in role_choices %}
+                    {% for role in role_distribution %}
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                            <span>{{ label }}</span>
-                            <span class="badge bg-secondary">
-                                {{ users.paginator.object_list|default_if_none:0 }} <!-- This would need proper counting in the view -->
+                            <span>{{ role.label }}</span>
+                            <span class="badge bg-{% if role.count > 0 %}primary{% else %}secondary{% endif %}">
+                                {{ role.count }}
                             </span>
                         </div>
                     </div>

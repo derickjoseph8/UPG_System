@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-bell"></i> {{ page_title }}</h1>
+        {% if unread_count > 0 %}
+        <span class="badge bg-danger">{{ unread_count }} unread</span>
+        {% endif %}
+    </div>
+    <div>
+        {% if unread_count > 0 %}
+        <a href="?mark_read=all" class="btn btn-outline-primary">
+            <i class="fas fa-check-double"></i> Mark All as Read
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if notifications %}
+<div class="card">
+    <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+            {% for notification in notifications %}
+            <li class="list-group-item {% if not notification.is_read %}bg-light{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-1">
+                            {% if notification.notification_type == 'fa_assignment' %}
+                            <i class="fas fa-user-tie text-primary me-2"></i>
+                            {% elif notification.notification_type == 'mentor_request' %}
+                            <i class="fas fa-user-plus text-success me-2"></i>
+                            {% elif notification.notification_type == 'program_update' %}
+                            <i class="fas fa-clipboard-list text-info me-2"></i>
+                            {% else %}
+                            <i class="fas fa-bell text-secondary me-2"></i>
+                            {% endif %}
+                            <strong>{{ notification.title }}</strong>
+                            {% if not notification.is_read %}
+                            <span class="badge bg-danger ms-2">New</span>
+                            {% endif %}
+                        </div>
+                        <p class="mb-1 text-muted">{{ notification.message }}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>{{ notification.created_at|timesince }} ago
+                            {% if notification.program %}
+                            | <i class="fas fa-clipboard me-1"></i>{{ notification.program.name }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div>
+                        {% if notification.action_url %}
+                        <a href="{% url 'programs:mark_notification_read' notification.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-arrow-right"></i> View
+                        </a>
+                        {% elif not notification.is_read %}
+                        <a href="{% url 'programs:mark_notification_read' notification.id %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-check"></i> Mark Read
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-bell-slash text-muted" style="font-size: 4rem;"></i>
+        <h4 class="text-muted mt-3">No notifications</h4>
+        <p class="text-muted">You don't have any notifications yet.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

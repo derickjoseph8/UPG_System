@@ -5,31 +5,120 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
-from .models import Training, TrainingAttendance
+from .models import Training, TrainingAttendance, TrainingFieldAssociate, TrainingMentorAssignment
 from households.models import Household
 
 @login_required
 def training_list(request):
     """Training Sessions list view with role-based filtering"""
-    user = request.user
+    from core.models import BusinessMentorCycle, Mentor
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
 
-    # Filter trainings based on user role
-    if user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate']:
+    user = request.user
+    user_role = getattr(user, 'role', None)
+
+    # Filter trainings based on user role and assignments
+    if user.is_superuser or user_role in ['ict_admin', 'me_staff', 'program_manager']:
         # Full access to all trainings
         training_sessions = Training.objects.all()
-    elif user.role == 'mentor':
-        # Mentors only see trainings they're assigned to
-        training_sessions = Training.objects.filter(assigned_mentor=user)
+    elif user_role == 'field_associate':
+        # FAs see trainings assigned to them via TrainingFieldAssociate
+        my_training_ids = TrainingFieldAssociate.objects.filter(
+            field_associate=user
+        ).values_list('training_id', flat=True)
+        training_sessions = Training.objects.filter(id__in=my_training_ids)
+    elif user_role == 'mentor':
+        # Mentors see trainings assigned to them via TrainingMentorAssignment
+        my_training_ids = TrainingMentorAssignment.objects.filter(
+            mentor=user
+        ).values_list('training_fa__training_id', flat=True)
+        # Also include trainings where they're directly assigned (legacy)
+        legacy_training_ids = Training.objects.filter(assigned_mentor=user).values_list('id', flat=True)
+        all_training_ids = set(my_training_ids) | set(legacy_training_ids)
+        training_sessions = Training.objects.filter(id__in=all_training_ids)
     else:
         # Other roles have no access to trainings
         training_sessions = Training.objects.none()
 
     training_sessions = training_sessions.order_by('-created_at')
 
+    # Add stats for each training
+    from django.db.models import Count, Q
+    training_sessions = training_sessions.annotate(
+        enrolled_count=Count('attendances__household', distinct=True),
+        present_count=Count('attendances', filter=Q(attendances__attendance=True)),
+        total_attendance_records=Count('attendances')
+    )
+
+    # Calculate stats summary
+    planned_count = training_sessions.filter(status='planned').count()
+    active_count = training_sessions.filter(status='active').count()
+    completed_count = training_sessions.filter(status='completed').count()
+
+    # Get BM Cycles based on role
+    if user_role == 'mentor':
+        # Mentors see only BM cycles they are attached to
+        if hasattr(user, 'mentor_profile'):
+            bm_cycles = BusinessMentorCycle.objects.filter(business_mentor=user.mentor_profile)
+        else:
+            bm_cycles = BusinessMentorCycle.objects.none()
+    elif user_role == 'field_associate':
+        # FAs see BM cycles for their supervised mentors
+        supervised_mentor_ids = []
+        if hasattr(user, 'profile') and user.profile:
+            supervised_users = user.profile.supervised_mentors
+            for su in supervised_users:
+                if hasattr(su, 'mentor_profile'):
+                    supervised_mentor_ids.append(su.mentor_profile.id)
+        bm_cycles = BusinessMentorCycle.objects.filter(business_mentor_id__in=supervised_mentor_ids)
+    elif user_role == 'program_manager':
+        # PMs see all BM cycles
+        bm_cycles = BusinessMentorCycle.objects.all()
+    else:
+        # Admins see all
+        bm_cycles = BusinessMentorCycle.objects.all()
+
+    # Get Mentors for assignment dropdown based on role
+    current_mentor_user = None
+    available_mentors = []
+
+    if user_role == 'mentor':
+        # Mentors auto-select themselves
+        current_mentor_user = user
+        available_mentors = [user]  # Only show themselves
+    elif user_role == 'field_associate':
+        # FAs see their supervised mentors
+        if hasattr(user, 'profile') and user.profile:
+            available_mentors = list(user.profile.supervised_mentors)
+    elif user_role == 'program_manager':
+        # PMs see all mentors
+        available_mentors = list(User.objects.filter(role='mentor', is_active=True))
+    else:
+        # Admins see all mentors
+        available_mentors = list(User.objects.filter(role='mentor', is_active=True))
+
+    # Get available Field Associates for assignment (for PM/Admin roles)
+    field_associates = []
+    can_assign_fa = user.is_superuser or user_role in ['ict_admin', 'me_staff', 'program_manager']
+    if can_assign_fa:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        field_associates = User.objects.filter(role='field_associate', is_active=True).order_by('first_name', 'last_name')
+
     context = {
         'training_sessions': training_sessions,
         'page_title': 'Training Sessions',
         'total_count': training_sessions.count(),
+        'planned_count': planned_count,
+        'active_count': active_count,
+        'completed_count': completed_count,
+        'bm_cycles': bm_cycles,
+        'available_mentors': available_mentors,
+        'current_mentor_user': current_mentor_user,
+        'user_role': user_role,
+        'field_associates': field_associates,
+        'can_assign_fa': can_assign_fa,
     }
 
     return render(request, 'training/training_list.html', context)
@@ -145,13 +234,14 @@ def manage_attendance(request, training_id):
 
     # Check permissions
     user = request.user
-    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate'] or
+    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate', 'program_manager'] or
             (user.role == 'mentor' and training.assigned_mentor == user)):
         return HttpResponseForbidden()
 
     # Get selected date from request or use today's date
-    selected_date_str = request.GET.get('date')
-    if selected_date_str:
+    # Support both 'date' parameter (from dropdown) and 'custom_date' (from date input)
+    selected_date_str = request.GET.get('date') or request.GET.get('custom_date')
+    if selected_date_str and selected_date_str != 'custom':
         try:
             selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
         except ValueError:
@@ -177,10 +267,18 @@ def manage_attendance(request, training_id):
     if not training_dates:
         training_dates = [timezone.now().date()]
 
-    # If selected date not in training dates and training has started, add it
-    if selected_date not in training_dates and training.status in ['active', 'completed']:
+    # Add dates that have attendance records (for historical retroactive entries)
+    attendance_dates = training.attendances.values_list('training_date', flat=True).distinct()
+    for att_date in attendance_dates:
+        if att_date and att_date not in training_dates:
+            training_dates.append(att_date)
+
+    # If selected date not in training dates, add it (allows any date to be selected)
+    if selected_date not in training_dates:
         training_dates.append(selected_date)
-        training_dates.sort()
+
+    # Sort dates
+    training_dates.sort()
 
     # Filter attendances for the selected date
     attendances = training.attendances.filter(training_date=selected_date).select_related('household__village', 'marked_by').order_by('household__name')
@@ -214,11 +312,18 @@ def manage_attendance(request, training_id):
 @require_http_methods(["POST"])
 def create_training(request):
     """Create a new training session"""
+    from django.shortcuts import redirect
+    from django.contrib import messages
+
     user = request.user
 
-    # Check permissions - mentors can now create/schedule trainings
-    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate', 'mentor']):
-        return JsonResponse({'success': False, 'message': 'Permission denied'})
+    # Check permissions - mentors, FA, and PM can create/schedule trainings
+    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate', 'mentor', 'program_manager']):
+        messages.error(request, 'Permission denied')
+        return redirect('training:training_list')
+
+    # Check if AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     try:
         # Extract form data
@@ -290,7 +395,13 @@ def create_training(request):
                 errors['start_date'] = ['Invalid date format']
 
         if errors:
-            return JsonResponse({'success': False, 'errors': errors})
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': errors})
+            else:
+                for field, error_list in errors.items():
+                    for error in error_list:
+                        messages.error(request, f'{field}: {error}')
+                return redirect('training:training_list')
 
         # Create training
         training = Training.objects.create(
@@ -305,17 +416,42 @@ def create_training(request):
             max_households=max_households
         )
 
-        return JsonResponse({
-            'success': True,
-            'message': f'Training "{training.name}" created successfully',
-            'training_id': training.id
-        })
+        # Handle Field Associate assignments (for PM/Admin roles)
+        fa_ids = request.POST.getlist('field_associates[]') or request.POST.getlist('field_associates')
+        if fa_ids and (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'program_manager']):
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            for fa_id in fa_ids:
+                try:
+                    fa_user = User.objects.get(id=fa_id, role='field_associate')
+                    TrainingFieldAssociate.objects.create(
+                        training=training,
+                        field_associate=fa_user,
+                        assigned_by=user,
+                        status='pending'
+                    )
+                except User.DoesNotExist:
+                    pass
+
+        if is_ajax:
+            return JsonResponse({
+                'success': True,
+                'message': f'Training "{training.name}" created successfully',
+                'training_id': training.id
+            })
+        else:
+            messages.success(request, f'Training "{training.name}" created successfully!')
+            return redirect('training:training_list')
 
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Error creating training: {str(e)}'
-        })
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error creating training: {str(e)}'
+            })
+        else:
+            messages.error(request, f'Error creating training: {str(e)}')
+            return redirect('training:training_list')
 
 
 @login_required
@@ -517,80 +653,108 @@ def get_available_households(request, training_id):
 @login_required
 @require_http_methods(["POST"])
 def add_household_to_training(request, training_id):
-    """Add a household to training attendance"""
+    """Add one or multiple households to training attendance (bulk add supported)"""
     training = get_object_or_404(Training, id=training_id)
 
     # Check permissions
     user = request.user
-    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate'] or
+    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate', 'program_manager'] or
             (user.role == 'mentor' and training.assigned_mentor == user)):
         return JsonResponse({'success': False, 'message': 'Permission denied'})
 
     try:
-        household_id = request.POST.get('household_id')
+        # Support both single household_id and multiple household_ids[]
+        household_ids = request.POST.getlist('household_ids[]') or request.POST.getlist('household_ids')
+        single_household_id = request.POST.get('household_id')
+
+        # If single ID provided, convert to list
+        if single_household_id and not household_ids:
+            household_ids = [single_household_id]
+
         training_date = request.POST.get('training_date')
 
-        if not household_id:
-            return JsonResponse({'success': False, 'message': 'Household is required'})
+        if not household_ids:
+            return JsonResponse({'success': False, 'message': 'At least one household is required'})
 
         if not training_date:
             return JsonResponse({'success': False, 'message': 'Training date is required'})
 
-        # Validate household exists
-        from households.models import Household
-        household = get_object_or_404(Household, id=household_id)
-
-        # Check if household is already in this training
-        if training.attendances.filter(household=household).exists():
-            return JsonResponse({'success': False, 'message': 'Household already enrolled in this training'})
-
-        # Check training capacity
-        if training.max_households and training.attendances.count() >= training.max_households:
-            return JsonResponse({'success': False, 'message': 'Training is at maximum capacity'})
-
         # Parse training date
         from datetime import datetime, timedelta
+        from households.models import Household
         training_date_obj = datetime.strptime(training_date, '%Y-%m-%d').date()
 
-        # Create attendance record for the selected date
-        attendance = TrainingAttendance.objects.create(
-            training=training,
-            household=household,
-            training_date=training_date_obj,
-            attendance=True,  # Default to present for current date
-            marked_by=user,
-            attendance_marked_at=timezone.now()
-        )
+        # Check training capacity
+        current_count = training.attendances.values('household').distinct().count()
+        available_slots = training.max_households - current_count if training.max_households else 999
 
-        # Automatically mark absent for all previous training dates
-        absent_records_created = 0
-        if training.start_date and training_date_obj > training.start_date:
-            current_date = training.start_date
-            while current_date < training_date_obj:
-                # Only create if within training period
-                if not training.end_date or current_date <= training.end_date:
-                    # Check if attendance record already exists for this date
-                    if not training.attendances.filter(household=household, training_date=current_date).exists():
-                        TrainingAttendance.objects.create(
-                            training=training,
-                            household=household,
-                            training_date=current_date,
-                            attendance=False,  # Mark as absent for past dates
-                            marked_by=user,
-                            attendance_marked_at=timezone.now()
-                        )
-                        absent_records_created += 1
-                current_date += timedelta(days=1)
+        if len(household_ids) > available_slots:
+            return JsonResponse({
+                'success': False,
+                'message': f'Only {available_slots} slot(s) available. You selected {len(household_ids)} households.'
+            })
 
-        message = f'Household "{household.name}" added to training successfully'
-        if absent_records_created > 0:
-            message += f'. Automatically marked absent for {absent_records_created} previous date(s).'
+        added_count = 0
+        skipped_count = 0
+        added_names = []
+
+        for hh_id in household_ids:
+            try:
+                household = Household.objects.get(id=hh_id)
+
+                # Check if household is already in this training
+                if training.attendances.filter(household=household).exists():
+                    skipped_count += 1
+                    continue
+
+                # Create attendance record
+                TrainingAttendance.objects.create(
+                    training=training,
+                    household=household,
+                    training_date=training_date_obj,
+                    attendance=True,
+                    marked_by=user,
+                    attendance_marked_at=timezone.now()
+                )
+                added_count += 1
+                added_names.append(household.name)
+
+                # Mark absent for previous dates if applicable
+                if training.start_date and training_date_obj > training.start_date:
+                    current_date = training.start_date
+                    while current_date < training_date_obj:
+                        if not training.end_date or current_date <= training.end_date:
+                            if not training.attendances.filter(household=household, training_date=current_date).exists():
+                                TrainingAttendance.objects.create(
+                                    training=training,
+                                    household=household,
+                                    training_date=current_date,
+                                    attendance=False,
+                                    marked_by=user,
+                                    attendance_marked_at=timezone.now()
+                                )
+                        current_date += timedelta(days=1)
+
+            except Household.DoesNotExist:
+                skipped_count += 1
+                continue
+
+        if added_count == 0:
+            return JsonResponse({
+                'success': False,
+                'message': 'No households were added. They may already be enrolled.'
+            })
+
+        message = f'Successfully added {added_count} household(s) to training'
+        if skipped_count > 0:
+            message += f' ({skipped_count} skipped - already enrolled)'
 
         return JsonResponse({
             'success': True,
             'message': message,
-            'attendance_id': attendance.id,
-            'absent_records_created': absent_records_created
+            'added_count': added_count,
+            'skipped_count': skipped_count,
+            'added_names': added_names[:5]  # Return first 5 names
         })
 
     except Exception as e:
@@ -608,9 +772,17 @@ def toggle_attendance(request, attendance_id):
 
     # Check permissions
     user = request.user
-    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate'] or
-            (user.role == 'mentor' and attendance.training.assigned_mentor == user)):
-        return JsonResponse({'success': False, 'message': 'Permission denied'})
+    user_role = getattr(user, 'role', None)
+
+    # Allow: superuser, admin roles, FA, PM, or any mentor
+    # Mentors can mark attendance - they can only see their assigned trainings anyway
+    has_permission = (
+        user.is_superuser or
+        user_role in ['ict_admin', 'me_staff', 'field_associate', 'program_manager', 'mentor']
+    )
+
+    if not has_permission:
+        return JsonResponse({'success': False, 'message': 'Permission denied.'})
 
     try:
         new_attendance = request.POST.get('attendance') == 'true'
@@ -640,8 +812,15 @@ def remove_attendance(request, attendance_id):
 
     # Check permissions
     user = request.user
-    if not (user.is_superuser or user.role in ['ict_admin', 'me_staff', 'field_associate'] or
-            (user.role == 'mentor' and attendance.training.assigned_mentor == user)):
+    user_role = getattr(user, 'role', None)
+
+    # Allow: superuser, admin roles, FA, PM, or any mentor
+    has_permission = (
+        user.is_superuser or
+        user_role in ['ict_admin', 'me_staff', 'field_associate', 'program_manager', 'mentor']
+    )
+
+    if not has_permission:
         return JsonResponse({'success': False, 'message': 'Permission denied'})
 
     try:
@@ -658,3 +837,113 @@ def remove_attendance(request, attendance_id):
             'success': False,
             'message': f'Error removing household: {str(e)}'
         })
+
+
+@login_required
+def training_assign_mentors(request, training_id):
+    """FA assigns mentors to a training they're assigned to"""
+    from django.contrib.auth import get_user_model
+    from django.contrib import messages
+    User = get_user_model()
+
+    user = request.user
+    training = get_object_or_404(Training, id=training_id)
+
+    # Check if user is FA assigned to this training
+    try:
+        fa_assignment = TrainingFieldAssociate.objects.get(
+            training=training,
+            field_associate=user
+        )
+    except TrainingFieldAssociate.DoesNotExist:
+        # Allow admin roles to also manage mentor assignments
+        if not (user.is_superuser or user.role in ['me_staff', 'ict_admin', 'program_manager']):
+            messages.error(request, 'You are not assigned to manage this training')
+            return redirect('training:training_list')
+        fa_assignment = None
+
+    if request.method == 'POST':
+        mentor_ids = request.POST.getlist('mentors[]') or request.POST.getlist('mentors')
+
+        if fa_assignment:
+            # Get current mentor assignments for this FA
+            current_mentor_ids = set(TrainingMentorAssignment.objects.filter(
+                training_fa=fa_assignment
+            ).values_list('mentor_id', flat=True))
+
+            new_mentor_ids = set(int(m_id) for m_id in mentor_ids if m_id)
+
+            # Add new mentor assignments
+            added_count = 0
+            for mentor_id in new_mentor_ids - current_mentor_ids:
+                try:
+                    mentor = User.objects.get(id=mentor_id, role='mentor')
+                    TrainingMentorAssignment.objects.create(
+                        training_fa=fa_assignment,
+                        mentor=mentor,
+                        assigned_by=user
+                    )
+                    added_count += 1
+                except User.DoesNotExist:
+                    pass
+
+            # Remove mentor assignments that are no longer selected
+            removed_count = TrainingMentorAssignment.objects.filter(
+                training_fa=fa_assignment,
+                mentor_id__in=(current_mentor_ids - new_mentor_ids)
+            ).delete()[0]
+
+            messages.success(request, f'Mentor assignments updated. Added: {added_count}, Removed: {removed_count}')
+        else:
+            messages.info(request, 'Admin mentor assignment not yet implemented for non-FA users')
+
+        return redirect('training:training_assign_mentors', training_id=training_id)
+
+    # GET request - show assignment page
+    # Get available mentors (FA's supervised mentors)
+    if user.role == 'field_associate' and hasattr(user, 'profile') and user.profile:
+        available_mentors = list(user.profile.supervised_mentors)
+    else:
+        # Admin roles see all mentors
+        available_mentors = list(User.objects.filter(role='mentor', is_active=True))
+
+    # Get currently assigned mentors
+    assigned_mentor_ids = []
+    if fa_assignment:
+        assigned_mentor_ids = list(TrainingMentorAssignment.objects.filter(
+            training_fa=fa_assignment
+        ).values_list('mentor_id', flat=True))
+
+    context = {
+        'page_title': f'Assign Mentors - {training.name}',
+        'training': training,
+        'fa_assignment': fa_assignment,
+        'available_mentors': available_mentors,
+        'assigned_mentor_ids': assigned_mentor_ids,
+    }
+
+    return render(request, 'training/training_assign_mentors.html', context)
+
+
+@login_required
+def training_fa_assignments_list(request):
+    """List all trainings assigned to the current FA with their mentor assignments"""
+    from django.contrib import messages
+
+    user = request.user
+
+    if user.role != 'field_associate':
+        messages.error(request, 'This page is for Field Associates only')
+        return redirect('training:training_list')
+
+    # Get trainings assigned to this FA
+    fa_assignments = TrainingFieldAssociate.objects.filter(
+        field_associate=user
+    ).select_related('training', 'assigned_by').order_by('-assigned_at')
+
+    context = {
+        'page_title': 'My Training Assignments',
+        'fa_assignments': fa_assignments,
+    }
+
+    return render(request, 'training/fa_assignments_list.html', context)

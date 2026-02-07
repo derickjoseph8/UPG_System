@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_list' %}">Savings Groups</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_group_detail' savings_group.pk %}">{{ savings_group.name }}</a></li>
+            <li class="breadcrumb-item active">Loans</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-hand-holding-usd"></i> Loans - {{ savings_group.name }}</h2>
+            <p class="text-muted mb-0">Group Savings Available: <strong class="text-success">KES {{ savings_group.savings_to_date|floatformat:2 }}</strong></p>
+        </div>
+        <div>
+            <a href="{% url 'savings_groups:issue_loan' savings_group.pk %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Record Loan
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">KES {{ total_loaned|floatformat:0 }}</h3>
+                    <p class="mb-0">Total Loaned</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h3 class="text-success">KES {{ total_repaid|floatformat:0 }}</h3>
+                    <p class="mb-0">Total Repaid</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ active_loans }}</h3>
+                    <p class="mb-0">Active Loans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h3 class="text-danger">{{ overdue_loans }}</h3>
+                    <p class="mb-0">Overdue Loans</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Status</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <a href="{% url 'savings_groups:loan_list' savings_group.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if bad_loans %}
+    <!-- Overdue/Problem Loans -->
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Overdue Loans ({{ bad_loans|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Loan Amount</th>
+                            <th>Total Due</th>
+                            <th>Repaid</th>
+                            <th>Balance</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in bad_loans %}
+                        <tr class="table-danger">
+                            <td><strong>{{ loan.member.household }}</strong></td>
+                            <td>KES {{ loan.loan_amount|floatformat:2 }}</td>
+                            <td>KES {{ loan.total_due|floatformat:2 }}</td>
+                            <td class="text-success">KES {{ loan.amount_repaid|floatformat:2 }}</td>
+                            <td class="text-danger fw-bold">KES {{ loan.balance|floatformat:2 }}</td>
+                            <td>
+                                {{ loan.due_date|date:"M d, Y" }}<br>
+                                <span class="badge bg-danger">{{ loan.days_status }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if loan.status == 'defaulted' %}dark{% else %}warning{% endif %}">
+                                    {{ loan.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'savings_groups:loan_detail' savings_group.pk loan.pk %}" class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if loan.status in 'active,partially_repaid' %}
+                                    <a href="{% url 'savings_groups:record_repayment' savings_group.pk loan.pk %}" class="btn btn-outline-success" title="Record Repayment">
+                                        <i class="fas fa-coins"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Good Loans -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-check-circle"></i> On-Track Loans ({{ good_loans|length }})</h5>
+        </div>
+        <div class="card-body">
+            {% if good_loans %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Loan Amount</th>
+                            <th>Interest</th>
+                            <th>Total Due</th>
+                            <th>Repaid</th>
+                            <th>Balance</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in good_loans %}
+                        <tr class="{% if loan.status == 'fully_repaid' %}table-success{% endif %}">
+                            <td><strong>{{ loan.member.household }}</strong></td>
+                            <td>KES {{ loan.loan_amount|floatformat:2 }}</td>
+                            <td>{{ loan.interest_rate }}%</td>
+                            <td>KES {{ loan.total_due|floatformat:2 }}</td>
+                            <td class="text-success">KES {{ loan.amount_repaid|floatformat:2 }}</td>
+                            <td class="{% if loan.balance > 0 %}text-warning{% else %}text-success{% endif %}">
+                                KES {{ loan.balance|floatformat:2 }}
+                            </td>
+                            <td>
+                                {{ loan.due_date|date:"M d, Y" }}<br>
+                                <span class="badge bg-{% if loan.status == 'fully_repaid' %}success{% else %}info{% endif %}">
+                                    {{ loan.days_status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if loan.status == 'fully_repaid' %}success{% elif loan.status == 'active' %}primary{% elif loan.status == 'partially_repaid' %}warning{% else %}secondary{% endif %}">
+                                    {{ loan.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'savings_groups:loan_detail' savings_group.pk loan.pk %}" class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if loan.status in 'active,partially_repaid' %}
+                                    <a href="{% url 'savings_groups:record_repayment' savings_group.pk loan.pk %}" class="btn btn-outline-success" title="Record Repayment">
+                                        <i class="fas fa-coins"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-hand-holding-usd fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Loans Found</h4>
+                <p class="text-muted">No loans have been recorded for this savings group yet.</p>
+                <a href="{% url 'savings_groups:issue_loan' savings_group.pk %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Record First Loan
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

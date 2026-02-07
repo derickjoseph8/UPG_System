@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}Executive Dashboard - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-briefcase"></i> Executive Dashboard</h1>
+    <span class="badge bg-primary fs-6">County Executive</span>
+</div>
+
+<!-- Executive Notice -->
+<div class="alert alert-primary mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>Executive View:</strong> High-level program overview and key performance indicators for County leadership.
+    <span class="badge bg-secondary ms-2">View Only</span>
+</div>
+
+<!-- Quick Actions: Reports Only -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Generate Reports</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'reports:report_list' %}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="fas fa-chart-bar fa-2x mb-2 d-block"></i>
+                            All Reports
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'reports:report_list' %}?type=program_summary" class="btn btn-outline-success w-100 py-3">
+                            <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
+                            Program Summary
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'reports:report_list' %}?type=financial" class="btn btn-outline-warning w-100 py-3">
+                            <i class="fas fa-money-bill-wave fa-2x mb-2 d-block"></i>
+                            Financial Report
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'reports:report_list' %}?type=graduation" class="btn btn-outline-info w-100 py-3">
+                            <i class="fas fa-graduation-cap fa-2x mb-2 d-block"></i>
+                            Graduation Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards with Targets -->
+<div class="row mb-4">
+    {% for key, kpi in kpis.items %}
+    <div class="col-md-3 mb-3">
+        {% include 'includes/kpi_card.html' with title=kpi.title value=kpi.value target=kpi.target icon=kpi.icon icon_bg=kpi.icon_bg icon_color=kpi.icon_color %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Enrollment Trend Chart -->
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Enrollment Trend (Last 6 Months)</h5>
+            </div>
+            <div class="card-body">
+                {% include 'includes/charts/line_chart.html' with chart_id='execEnrollmentChart' labels=enrollment_trend.labels values=enrollment_trend.values dataset_label='Cumulative Households' height=280 %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Distribution Chart -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Participation Status</h5>
+            </div>
+            <div class="card-body">
+                {% include 'includes/charts/doughnut_chart.html' with chart_id='execStatusChart' labels=status_distribution.labels values=status_distribution.values bg_colors=status_distribution.colors height=250 %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Geographic & Grant Distribution -->
+<div class="row mb-4">
+    <!-- Geographic Distribution -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Households by SubCounty</h5>
+            </div>
+            <div class="card-body">
+                {% include 'includes/charts/bar_chart.html' with chart_id='execGeoChart' labels=geographic_distribution.labels values=geographic_distribution.values dataset_label='Households' index_axis='y' height=250 %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Grant Distribution -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Grants Disbursed</h5>
+            </div>
+            <div class="card-body">
+                {% include 'includes/charts/bar_chart.html' with chart_id='execGrantChart' labels=grant_distribution.labels values=grant_distribution.values bg_colors=grant_distribution.colors dataset_label='Count' height=250 %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Program Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center bg-primary bg-opacity-10">
+                            <h3 class="text-primary mb-1">{{ stats.total_households }}</h3>
+                            <small class="text-muted">Total Households</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center bg-success bg-opacity-10">
+                            <h3 class="text-success mb-1">{{ stats.active_households }}</h3>
+                            <small class="text-muted">Active Households</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center bg-info bg-opacity-10">
+                            <h3 class="text-info mb-1">{{ stats.graduated_households }}</h3>
+                            <small class="text-muted">Graduated</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center bg-warning bg-opacity-10">
+                            <h3 class="text-warning mb-1">{{ stats.graduation_rate }}%</h3>
+                            <small class="text-muted">Graduation Rate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Financial Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="border rounded p-3 text-center bg-success bg-opacity-10">
+                            <h3 class="text-success mb-1">KES {{ stats.grants_disbursed|floatformat:0|default:0 }}</h3>
+                            <small class="text-muted">Total Grants Disbursed</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center">
+                            <h4 class="text-primary mb-1">{{ stats.total_grants_funded }}</h4>
+                            <small class="text-muted">Grants Funded</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center">
+                            <h4 class="text-info mb-1">{{ stats.active_business_groups }}</h4>
+                            <small class="text-muted">Active Business Groups</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Capacity Building -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Capacity Building Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="p-3">
+                            <i class="fas fa-chalkboard-teacher fa-3x text-primary mb-2"></i>
+                            <h4>{{ stats.total_trainings }}</h4>
+                            <p class="text-muted mb-0">Total Trainings</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3">
+                            <i class="fas fa-user-tie fa-3x text-success mb-2"></i>
+                            <h4>{{ stats.active_mentors }}</h4>
+                            <p class="text-muted mb-0">Active Mentors</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3">
+                            <i class="fas fa-briefcase fa-3x text-info mb-2"></i>
+                            <h4>{{ stats.total_business_groups }}</h4>
+                            <p class="text-muted mb-0">Business Groups</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3">
+                            <i class="fas fa-check-circle fa-3x text-warning mb-2"></i>
+                            <h4>{{ stats.active_business_groups }}</h4>
+                            <p class="text-muted mb-0">Active Groups</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

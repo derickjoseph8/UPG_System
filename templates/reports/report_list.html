@@ -81,23 +81,34 @@
                     <a href="{% url 'reports:download_household_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">Household Registration Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <div>
+                                <span class="badge bg-success me-1"><i class="fas fa-file-csv"></i> CSV</span>
+                            </div>
                         </div>
-                        <p class="mb-1">Complete list of registered households with demographics</p>
+                        <p class="mb-1 small text-muted">Complete list of registered households with demographics</p>
+                    </a>
+                    <a href="{% url 'reports:download_household_pdf_report' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Household Report with Charts</h6>
+                            <div>
+                                <span class="badge bg-danger"><i class="fas fa-file-pdf"></i> PDF</span>
+                            </div>
+                        </div>
+                        <p class="mb-1 small text-muted">Visual report with pie charts and village distribution</p>
                     </a>
                     <a href="{% url 'reports:download_ppi_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">PPI Assessment Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <span class="badge bg-success"><i class="fas fa-file-csv"></i> CSV</span>
                         </div>
-                        <p class="mb-1">Poverty Probability Index scores and classifications</p>
+                        <p class="mb-1 small text-muted">Poverty Probability Index scores and classifications</p>
                     </a>
                     <a href="{% url 'reports:download_program_participation_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">Program Participation Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <span class="badge bg-success"><i class="fas fa-file-csv"></i> CSV</span>
                         </div>
-                        <p class="mb-1">Household participation in UPG programs</p>
+                        <p class="mb-1 small text-muted">Household participation in UPG programs</p>
                     </a>
                 </div>
             </div>
@@ -114,23 +125,44 @@
                     <a href="{% url 'reports:download_business_groups_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">Business Groups Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <span class="badge bg-success"><i class="fas fa-file-csv"></i> CSV</span>
                         </div>
-                        <p class="mb-1">Formation, membership, and progress of business groups</p>
+                        <p class="mb-1 small text-muted">Formation, membership, and progress</p>
+                    </a>
+                    <a href="{% url 'reports:download_business_groups_pdf_report' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Business Groups with Charts</h6>
+                            <span class="badge bg-danger"><i class="fas fa-file-pdf"></i> PDF</span>
+                        </div>
+                        <p class="mb-1 small text-muted">Visual report with business type distribution</p>
                     </a>
                     <a href="{% url 'reports:download_savings_groups_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">Savings Groups Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <span class="badge bg-success"><i class="fas fa-file-csv"></i> CSV</span>
                         </div>
-                        <p class="mb-1">BSG savings, loans, and financial activities</p>
+                        <p class="mb-1 small text-muted">BSG savings, loans, and financial activities</p>
+                    </a>
+                    <a href="{% url 'reports:download_savings_groups_pdf_report' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Savings Groups with Summary</h6>
+                            <span class="badge bg-danger"><i class="fas fa-file-pdf"></i> PDF</span>
+                        </div>
+                        <p class="mb-1 small text-muted">Visual report with savings totals</p>
                     </a>
                     <a href="{% url 'reports:download_grants_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Grant Disbursement Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <h6 class="mb-1">Grants Report</h6>
+                            <span class="badge bg-success"><i class="fas fa-file-csv"></i> CSV</span>
                         </div>
-                        <p class="mb-1">SB and PR grant allocations and utilization</p>
+                        <p class="mb-1 small text-muted">SB and PR grant allocations</p>
+                    </a>
+                    <a href="{% url 'reports:download_grants_pdf_report' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Grants Report with Charts</h6>
+                            <span class="badge bg-danger"><i class="fas fa-file-pdf"></i> PDF</span>
+                        </div>
+                        <p class="mb-1 small text-muted">Visual report with status distribution pie chart</p>
                     </a>
                 </div>
             </div>
@@ -149,16 +181,30 @@
                     <a href="{% url 'reports:download_training_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">Training Attendance Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <small><i class="fas fa-file-csv text-success"></i> CSV</small>
                         </div>
                         <p class="mb-1">Training session attendance and completion rates</p>
+                    </a>
+                    <a href="{% url 'reports:mentoring_activities_dashboard' %}" class="list-group-item list-group-item-action list-group-item-primary">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="fas fa-chart-line me-2"></i>Mentoring Activities Dashboard</h6>
+                            <small><i class="fas fa-eye"></i> View</small>
+                        </div>
+                        <p class="mb-1">Interactive dashboard with charts and visualizations</p>
                     </a>
                     <a href="{% url 'reports:download_mentoring_report' %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">Mentoring Activities Report</h6>
-                            <small><i class="fas fa-download"></i></small>
+                            <small><i class="fas fa-file-csv text-success"></i> CSV</small>
                         </div>
-                        <p class="mb-1">Mentor visits, support, and progress tracking</p>
+                        <p class="mb-1">Mentor visits, phone calls, and progress tracking</p>
+                    </a>
+                    <a href="{% url 'reports:download_mentoring_pdf_report' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Mentoring Activities PDF Report</h6>
+                            <small><i class="fas fa-file-pdf text-danger"></i> PDF</small>
+                        </div>
+                        <p class="mb-1">Printable PDF report with statistics and tables</p>
                     </a>
                 </div>
             </div>
@@ -193,6 +239,15 @@
                         </div>
                         <p class="mb-1">Create custom reports with selected parameters</p>
                     </a>
+                    <a href="{% url 'reports:comparative_report' %}" class="list-group-item list-group-item-action list-group-item-primary">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="fas fa-balance-scale me-2"></i>Comparative Reports</h6>
+                            <div>
+                                <span class="badge bg-primary">NEW</span>
+                            </div>
+                        </div>
+                        <p class="mb-1">Compare metrics across months, quarters, and years (PDF)</p>
+                    </a>
                 </div>
             </div>
         </div>
@@ -208,25 +263,69 @@
         <div class="row">
             <div class="col-md-3 mb-2">
                 <a href="{% url 'reports:download_household_report' %}" class="btn btn-outline-primary w-100">
-                    <i class="fas fa-file-excel"></i> Export Households (CSV)
+                    <i class="fas fa-file-csv"></i> Households (CSV)
                 </a>
             </div>
             <div class="col-md-3 mb-2">
                 <a href="{% url 'reports:download_business_groups_report' %}" class="btn btn-outline-success w-100">
-                    <i class="fas fa-file-csv"></i> Export Business Groups
+                    <i class="fas fa-file-csv"></i> Business Groups (CSV)
                 </a>
             </div>
             <div class="col-md-3 mb-2">
-                <a href="{% url 'reports:download_grants_report' %}" class="btn btn-outline-danger w-100">
-                    <i class="fas fa-file-pdf"></i> Export Grants
+                <a href="{% url 'reports:download_grants_report' %}" class="btn btn-outline-warning w-100">
+                    <i class="fas fa-file-csv"></i> Grants (CSV)
                 </a>
             </div>
             <div class="col-md-3 mb-2">
-                <a href="#" class="btn btn-outline-info w-100" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print Report
+                <a href="{% url 'reports:download_comprehensive_pdf_report' %}" class="btn btn-danger w-100">
+                    <i class="fas fa-file-pdf"></i> Full Report (PDF)
                 </a>
             </div>
         </div>
     </div>
 </div>
+
+{% if mentor_logs_visible %}
+<!-- Mentoring Stats Card -->
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="fas fa-user-friends"></i> Mentoring Activity Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <h3 class="text-primary">{{ reports_data.total_house_visits|default:0 }}</h3>
+                <p class="text-muted mb-0">Total House Visits</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-success">{{ reports_data.total_phone_calls|default:0 }}</h3>
+                <p class="text-muted mb-0">Total Phone Calls</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-warning">{{ reports_data.recent_house_visits|default:0 }}</h3>
+                <p class="text-muted mb-0">Visits (Last 30 Days)</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-info">{{ reports_data.recent_phone_calls|default:0 }}</h3>
+                <p class="text-muted mb-0">Calls (Last 30 Days)</p>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <a href="{% url 'reports:mentoring_activities_dashboard' %}" class="btn btn-info">
+                <i class="fas fa-chart-line"></i> View Detailed Dashboard
+            </a>
+            <a href="{% url 'reports:download_mentoring_pdf_report' %}" class="btn btn-outline-danger ms-2">
+                <i class="fas fa-file-pdf"></i> Download PDF Report
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if scope_message %}
+<div class="alert alert-info mt-4">
+    <i class="fas fa-info-circle"></i> {{ scope_message }}
+</div>
+{% endif %}
 {% endblock %}

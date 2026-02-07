@@ -146,8 +146,42 @@
             </div>
         </div>
 
+        <!-- Mentor/FA Assignment Status -->
+        {% if is_assigned_mentor or is_assigned_fa %}
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="fas fa-user-check"></i> Your Assignment</h6>
+            </div>
+            <div class="card-body">
+                {% if is_assigned_mentor %}
+                <p class="mb-1"><strong>Role:</strong> Assigned Mentor</p>
+                <p class="mb-1"><strong>Supervisor:</strong> {{ mentor_assignment.program_fa.field_associate.get_full_name }}</p>
+                <p class="mb-2"><strong>Assigned:</strong> {{ mentor_assignment.assigned_at|date:"M d, Y" }}</p>
+                {% elif is_assigned_fa %}
+                <p class="mb-1"><strong>Role:</strong> Field Associate</p>
+                <p class="mb-1"><strong>Status:</strong> {{ fa_assignment.get_status_display }}</p>
+                <p class="mb-2"><strong>Mentors:</strong> {{ fa_assignment.mentor_count }}</p>
+                {% endif %}
+                <hr>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'programs:enroll_households' program.pk %}" class="btn btn-success">
+                        <i class="fas fa-user-plus"></i> Enroll Households
+                    </a>
+                    <a href="{% url 'programs:program_beneficiaries' program.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-users"></i> View Beneficiaries
+                    </a>
+                    {% if is_assigned_fa %}
+                    <a href="{% url 'programs:assign_mentors' program.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-user-tie"></i> Manage Mentors
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Management Actions for Authorized Users -->
-        {% if user.is_superuser or user == program.created_by or user.role in 'ict_admin,county_executive' %}
+        {% if user.is_superuser or user == program.created_by or user.role == 'ict_admin' or user.role == 'county_executive' or user.role == 'program_manager' %}
         <div class="card">
             <div class="card-header">
                 <h6><i class="fas fa-cogs"></i> Program Management</h6>
@@ -156,6 +190,12 @@
                 <div class="d-grid gap-2">
                     <a href="{% url 'programs:program_applications' program.pk %}" class="btn btn-outline-primary">
                         <i class="fas fa-list"></i> View Applications ({{ program.applications.count }})
+                    </a>
+                    <a href="{% url 'programs:program_beneficiaries' program.pk %}" class="btn btn-outline-info">
+                        <i class="fas fa-users"></i> View Beneficiaries
+                    </a>
+                    <a href="{% url 'programs:program_team' program.pk %}" class="btn btn-outline-success">
+                        <i class="fas fa-user-tie"></i> View Team
                     </a>
                     <a href="{% url 'programs:program_edit' program.pk %}" class="btn btn-outline-secondary">
                         <i class="fas fa-edit"></i> Edit Program

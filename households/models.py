@@ -111,10 +111,28 @@ class Household(models.Model):
         return 1 if self.disability else 0
 
     @property
-    def head_gender(self):
-        """Get gender of household head"""
+    def head_gender_from_member(self):
+        """
+        Get gender from household head member record.
+        Note: Use head_gender field for the stored value.
+        This property looks up from HouseholdMember for validation/sync purposes.
+        """
         head = self.head_member
         return head.gender if head else ''
+
+    def sync_head_info_from_member(self):
+        """
+        Sync household head info from the HouseholdMember record marked as 'head'.
+        Useful when member data is updated.
+        """
+        head = self.head_member
+        if head:
+            if head.gender and not self.head_gender:
+                self.head_gender = head.gender
+            if head.first_name and not self.head_first_name:
+                self.head_first_name = head.first_name
+            if head.last_name and not self.head_last_name:
+                self.head_last_name = head.last_name
 
     @property
     def head_age(self):
@@ -140,6 +158,12 @@ class Household(models.Model):
 
     class Meta:
         db_table = 'upg_households'
+        indexes = [
+            models.Index(fields=['village']),
+            models.Index(fields=['head_id_number']),
+            models.Index(fields=['head_phone_number']),
+            models.Index(fields=['created_at']),
+        ]
 
 
 class PPI(models.Model):
@@ -234,6 +258,11 @@ class HouseholdMember(models.Model):
 
     class Meta:
         db_table = 'upg_household_members'
+        indexes = [
+            models.Index(fields=['relationship_to_head']),
+            models.Index(fields=['gender']),
+            models.Index(fields=['is_program_participant']),
+        ]
 
 
 class HouseholdProgram(models.Model):

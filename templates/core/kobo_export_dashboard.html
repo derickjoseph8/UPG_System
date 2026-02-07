@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}KoBoToolbox Integration - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-cloud-upload-alt"></i> KoBoToolbox Integration</h1>
+    <div>
+        <a href="{% url 'dashboard:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Connection Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card {% if kobo_configured %}border-success{% else %}border-warning{% endif %}">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    {% if kobo_configured %}
+                    <i class="fas fa-check-circle text-success me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h5 class="mb-1">KoBoToolbox API Connected</h5>
+                        <p class="text-muted mb-0">Ready to push reference data automatically</p>
+                    </div>
+                    {% else %}
+                    <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h5 class="mb-1">KoBoToolbox API Not Configured</h5>
+                        <p class="text-muted mb-0">Add KOBO_API_TOKEN and KOBO_ASSET_UID to settings.py for automatic push</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Cards -->
+<div class="row">
+    <!-- Households -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-home"></i> Households</h5>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center mb-3">{{ household_count }}</h2>
+                <p class="text-muted">
+                    Export household data for offline validation in KoBoToolbox forms.
+                    Includes: ID, name, village, PPI score, eligibility status.
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:kobo_export_households' %}" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-download"></i> Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- BM Cycles -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> BM Cycles</h5>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center mb-3">{{ bm_cycle_count }}</h2>
+                <p class="text-muted">
+                    Export Business Mentor Cycles for dropdown selection in KoBoToolbox.
+                    Includes: Cycle name, mentor, field associate, office.
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:kobo_export_bm_cycles' %}" class="btn btn-outline-info w-100">
+                    <i class="fas fa-download"></i> Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Villages -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Villages</h5>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center mb-3">{{ village_count }}</h2>
+                <p class="text-muted">
+                    Export villages for cascading select (County > Sub-County > Village).
+                    Includes: Village name, sub-county, county, program area status.
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:kobo_export_villages' %}" class="btn btn-outline-success w-100">
+                    <i class="fas fa-download"></i> Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Groups -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-users"></i> Business Groups</h5>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center mb-3">{{ business_group_count }}</h2>
+                <p class="text-muted">
+                    Export business groups for validation and progress surveys.
+                    Includes: Group name, type, health status, grant status.
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:kobo_export_business_groups' %}" class="btn btn-outline-warning w-100">
+                    <i class="fas fa-download"></i> Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mentors -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-user-tie"></i> Mentors</h5>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center mb-3">{{ mentor_count }}</h2>
+                <p class="text-muted">
+                    Export mentors for assignment selection in surveys.
+                    Includes: Mentor name, office, country.
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:kobo_export_mentors' %}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-download"></i> Download CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download All -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-dark">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-file-archive"></i> All Reference Data</h5>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center mb-3"><i class="fas fa-box-open"></i></h2>
+                <p class="text-muted">
+                    Download all reference data as a single ZIP file.
+                    Upload to KoBoToolbox form settings > Media Files.
+                </p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:kobo_export_all' %}" class="btn btn-dark w-100">
+                    <i class="fas fa-download"></i> Download All (ZIP)
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> How to Use with KoBoToolbox</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><strong>Step 1: Download CSV Files</strong></h6>
+                <p>Click the download buttons above to get the CSV files you need.</p>
+
+                <h6><strong>Step 2: Upload to KoBoToolbox</strong></h6>
+                <ol>
+                    <li>Open your form in KoBoToolbox</li>
+                    <li>Go to <strong>Settings > Media Files</strong></li>
+                    <li>Upload the CSV files</li>
+                </ol>
+
+                <h6><strong>Step 3: Use pulldata() in Your Form</strong></h6>
+                <p>In your XLSForm, use the pulldata() function to validate data:</p>
+            </div>
+            <div class="col-md-6">
+                <h6><strong>Example XLSForm Formulas:</strong></h6>
+                <div class="bg-light p-3 rounded">
+                    <p><strong>Validate Household ID:</strong></p>
+                    <code>pulldata('households', 'hh_id', 'hh_id', ${household_id})</code>
+
+                    <p class="mt-3"><strong>Get Household Name:</strong></p>
+                    <code>pulldata('households', 'hh_name', 'hh_id', ${household_id})</code>
+
+                    <p class="mt-3"><strong>Check Eligibility:</strong></p>
+                    <code>pulldata('households', 'is_eligible', 'hh_id', ${household_id}) = '1'</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if kobo_configured %}
+<!-- Auto Push Section -->
+<div class="card mt-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-cloud-upload-alt"></i> Automatic Push to KoBoToolbox</h5>
+    </div>
+    <div class="card-body">
+        <p>Push all reference data directly to your KoBoToolbox form without downloading.</p>
+        <button id="pushToKoboBtn" class="btn btn-primary btn-lg">
+            <i class="fas fa-upload"></i> Push All Data to KoBoToolbox
+        </button>
+        <div id="pushResult" class="mt-3" style="display: none;"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('pushToKoboBtn').addEventListener('click', function() {
+    const btn = this;
+    const resultDiv = document.getElementById('pushResult');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pushing...';
+    resultDiv.style.display = 'none';
+
+    fetch('{% url "core:kobo_push" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'export_type=all'
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload"></i> Push All Data to KoBoToolbox';
+        resultDiv.style.display = 'block';
+
+        if (data.success) {
+            resultDiv.className = 'alert alert-success';
+            resultDiv.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+        } else {
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.innerHTML = '<i class="fas fa-times-circle"></i> ' + data.message;
+            if (data.details) {
+                resultDiv.innerHTML += '<br><small>' + JSON.stringify(data.details) + '</small>';
+            }
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload"></i> Push All Data to KoBoToolbox';
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'alert alert-danger';
+        resultDiv.innerHTML = '<i class="fas fa-times-circle"></i> Error: ' + error.message;
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}

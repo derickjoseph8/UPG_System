@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-user-friends"></i> {{ page_title }}</h2>
+                    <p class="text-muted">Assign mentors to facilitate this training</p>
+                </div>
+                <div>
+                    <a href="{% url 'training:fa_assignments_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to My Assignments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chalkboard-teacher"></i> Training: {{ training.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Module:</strong> {{ training.module_id }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Status:</strong>
+                            <span class="badge bg-{% if training.status == 'active' %}success{% elif training.status == 'planned' %}warning{% else %}secondary{% endif %}">
+                                {{ training.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Start Date:</strong> {{ training.start_date|date:"M d, Y"|default:"Not set" }}
+                        </div>
+                    </div>
+                    {% if training.description %}
+                    <p class="text-muted">{{ training.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-users"></i> Assign Mentors</h5>
+                </div>
+                <div class="card-body">
+                    {% if available_mentors %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <p class="text-muted mb-3">Select mentors who will facilitate this training:</p>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="select_all_mentors">
+                            <label class="form-check-label fw-bold" for="select_all_mentors">
+                                Select All Mentors ({{ available_mentors|length }})
+                            </label>
+                        </div>
+
+                        <div id="mentor-checkboxes" class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                            {% for mentor in available_mentors %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input mentor-checkbox" type="checkbox"
+                                       name="mentors[]" value="{{ mentor.id }}" id="mentor-{{ mentor.id }}"
+                                       {% if mentor.id in assigned_mentor_ids %}checked{% endif %}>
+                                <label class="form-check-label" for="mentor-{{ mentor.id }}">
+                                    <strong>{{ mentor.get_full_name }}</strong>
+                                    {% if mentor.email %}<span class="text-muted">({{ mentor.email }})</span>{% endif %}
+                                    {% if mentor.phone_number %}<br><small class="text-muted">Phone: {{ mentor.phone_number }}</small>{% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    Selected mentors will see this training in their dashboard.
+                                </small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Assignments
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        No mentors available to assign. Please contact your supervisor to add mentors to your team.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie"></i> Assignment Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Mentors Available:</span>
+                        <strong>{{ available_mentors|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Currently Assigned:</span>
+                        <strong id="assigned-count">{{ assigned_mentor_ids|length }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span>Assignment Rate:</span>
+                        <strong>
+                            {% if available_mentors|length > 0 %}
+                                {% widthratio assigned_mentor_ids|length available_mentors|length 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            {% if fa_assignment %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Your Assignment</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Assigned By:</strong> {{ fa_assignment.assigned_by.get_full_name }}</p>
+                    <p class="mb-2"><strong>Assigned On:</strong> {{ fa_assignment.assigned_at|date:"M d, Y" }}</p>
+                    <p class="mb-0">
+                        <strong>Status:</strong>
+                        <span class="badge bg-{% if fa_assignment.status == 'accepted' %}success{% elif fa_assignment.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                            {{ fa_assignment.get_status_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0 ps-3">
+                        <li class="mb-2">Assign mentors who work in areas where training participants are located</li>
+                        <li class="mb-2">Mentors will see this training in their dashboard once assigned</li>
+                        <li class="mb-2">Assigned mentors can manage attendance for this training</li>
+                        <li>You can update assignments anytime</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select All functionality
+    const selectAll = document.getElementById('select_all_mentors');
+    const checkboxes = document.querySelectorAll('.mentor-checkbox');
+    const assignedCount = document.getElementById('assigned-count');
+
+    function updateSelectAll() {
+        const total = checkboxes.length;
+        const checked = document.querySelectorAll('.mentor-checkbox:checked').length;
+        selectAll.checked = (total === checked);
+        selectAll.indeterminate = (checked > 0 && checked < total);
+        assignedCount.textContent = checked;
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(function(cb) {
+                cb.checked = selectAll.checked;
+            });
+            updateSelectAll();
+        });
+
+        checkboxes.forEach(function(cb) {
+            cb.addEventListener('change', updateSelectAll);
+        });
+
+        // Initial state
+        updateSelectAll();
+    }
+});
+</script>
+{% endblock %}

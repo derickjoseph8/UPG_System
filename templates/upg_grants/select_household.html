@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-file-invoice-dollar"></i> {{ page_title }}</h2>
+            <p class="text-muted">Select a household and grant program to apply for</p>
+        </div>
+        <a href="{% url 'upg_grants:grant_program_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Grant Programs
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Available Grant Programs -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-hand-holding-usd"></i> Available Grant Programs</h5>
+                </div>
+                <div class="card-body">
+                    {% if grant_programs %}
+                    <div class="list-group list-group-flush">
+                        {% for gp in grant_programs %}
+                        <a href="#" class="list-group-item list-group-item-action grant-program-select {% if selected_grant_program.id == gp.id %}active{% endif %}"
+                           data-program-id="{{ gp.id }}" data-program-name="{{ gp.name }}" data-grant-type="{{ gp.grant_type }}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ gp.name }}</h6>
+                                <span class="badge bg-{% if gp.status == 'active' %}success{% else %}secondary{% endif %}">
+                                    {{ gp.get_status_display }}
+                                </span>
+                            </div>
+                            <p class="mb-1 small text-muted">{{ gp.get_grant_type_display }}</p>
+                            <small>
+                                Budget: KES {{ gp.total_budget|floatformat:0 }}<br>
+                                Per beneficiary: KES {{ gp.min_amount_per_beneficiary|floatformat:0 }} - {{ gp.max_amount_per_beneficiary|floatformat:0 }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-circle fa-2x text-warning mb-3"></i>
+                        <p class="text-muted">No active grant programs available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Household Selection -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-home"></i> Select Household</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="householdSearch" placeholder="Search households by name or village...">
+                        </div>
+                    </div>
+
+                    <!-- Selected Grant Program Display -->
+                    <div id="selectedProgramDisplay" class="alert alert-info mb-3" style="display: {% if selected_grant_program %}block{% else %}none{% endif %}">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Selected Program:</strong>
+                        <span id="selectedProgramName">{% if selected_grant_program %}{{ selected_grant_program.name }}{% endif %}</span>
+                    </div>
+
+                    {% if households %}
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-hover table-sm" id="householdsTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Household Name</th>
+                                    <th>Village</th>
+                                    <th>Head of Household</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for household in households %}
+                                <tr class="household-row">
+                                    <td>
+                                        <strong>{{ household.name }}</strong>
+                                    </td>
+                                    <td>{{ household.village.name|default:"-" }}</td>
+                                    <td>
+                                        {% with head=household.members.all|first %}
+                                        {{ head.name|default:"-" }}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-success apply-btn"
+                                                data-household-id="{{ household.id }}"
+                                                data-household-name="{{ household.name }}">
+                                            <i class="fas fa-plus-circle"></i> Apply
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-2 text-muted">
+                        <small>Showing {{ households|length }} households in your assigned villages</small>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-home fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No households found in your assigned villages.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for submission -->
+<form id="applyForm" method="get" action="{% url 'upg_grants:application_create_universal' %}">
+    <input type="hidden" name="applicant_type" value="household">
+    <input type="hidden" name="applicant_id" id="selectedHouseholdId">
+    <input type="hidden" name="grant_program" id="selectedGrantProgramId" value="{% if selected_grant_program %}{{ selected_grant_program.id }}{% endif %}">
+    {% if grant_type %}
+    <input type="hidden" name="grant_type" value="{{ grant_type }}">
+    {% endif %}
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let selectedProgramId = {% if selected_grant_program %}{{ selected_grant_program.id }}{% else %}null{% endif %};
+    let selectedProgramName = '{% if selected_grant_program %}{{ selected_grant_program.name }}{% else %}{% endif %}';
+
+    // Grant program selection
+    document.querySelectorAll('.grant-program-select').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove active class from all
+            document.querySelectorAll('.grant-program-select').forEach(function(el) {
+                el.classList.remove('active');
+            });
+
+            // Add active to clicked
+            this.classList.add('active');
+
+            selectedProgramId = this.getAttribute('data-program-id');
+            selectedProgramName = this.getAttribute('data-program-name');
+
+            document.getElementById('selectedGrantProgramId').value = selectedProgramId;
+            document.getElementById('selectedProgramName').textContent = selectedProgramName;
+            document.getElementById('selectedProgramDisplay').style.display = 'block';
+        });
+    });
+
+    // Household search filter
+    document.getElementById('householdSearch').addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase();
+        document.querySelectorAll('.household-row').forEach(function(row) {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchText) ? '' : 'none';
+        });
+    });
+
+    // Apply button click
+    document.querySelectorAll('.apply-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const householdId = this.getAttribute('data-household-id');
+
+            if (!selectedProgramId) {
+                alert('Please select a Grant Program first');
+                return;
+            }
+
+            document.getElementById('selectedHouseholdId').value = householdId;
+            document.getElementById('applyForm').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

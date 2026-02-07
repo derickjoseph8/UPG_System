@@ -110,13 +110,13 @@
         <!-- Individual Members -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="fas fa-users"></i> Individual Members</h5>
+                <h5><i class="fas fa-users"></i> Active Members ({{ current_members }})</h5>
                 <a href="{% url 'savings_groups:add_member' savings_group.pk %}" class="btn btn-sm btn-primary">
                     <i class="fas fa-user-plus"></i> Add Member
                 </a>
             </div>
             <div class="card-body">
-                {% if savings_group.bsg_members.all %}
+                {% if active_members %}
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -125,29 +125,25 @@
                                     <th>Role</th>
                                     <th>Joined Date</th>
                                     <th>Total Savings</th>
-                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for member in savings_group.bsg_members.all %}
+                                {% for member in active_members %}
                                 <tr>
-                                    <td>{{ member.household.name }}</td>
-                                    <td><span class="badge bg-info">{{ member.get_role_display }}</span></td>
+                                    <td>{{ member.household }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if member.role == 'chairperson' %}warning text-dark{% elif member.role == 'secretary' %}info{% elif member.role == 'treasurer' %}success{% else %}secondary{% endif %}">
+                                            {{ member.get_role_display }}
+                                        </span>
+                                    </td>
                                     <td>{{ member.joined_date|date:"M d, Y" }}</td>
                                     <td>KES {{ member.total_savings|floatformat:2 }}</td>
                                     <td>
-                                        <span class="badge bg-{% if member.is_active %}success{% else %}secondary{% endif %}">
-                                            {% if member.is_active %}Active{% else %}Inactive{% endif %}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if member.is_active %}
                                         <a href="{% url 'savings_groups:remove_member' savings_group.pk member.pk %}"
-                                           class="btn btn-sm btn-outline-danger">
+                                           class="btn btn-sm btn-outline-danger" title="Remove Member">
                                             <i class="fas fa-user-minus"></i>
                                         </a>
-                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -155,13 +151,92 @@
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted">No individual members yet.</p>
+                    <p class="text-muted">No active members yet.</p>
+                {% endif %}
+
+                <!-- Removed/Inactive Members -->
+                {% if inactive_members %}
+                <hr>
+                <h6 class="text-muted mt-4"><i class="fas fa-user-slash"></i> Removed Members ({{ inactive_members.count }})</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-secondary">
+                        <thead>
+                            <tr>
+                                <th>Household</th>
+                                <th>Role</th>
+                                <th>Joined Date</th>
+                                <th>Total Savings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in inactive_members %}
+                            <tr class="text-muted">
+                                <td>{{ member.household }}</td>
+                                <td>{{ member.get_role_display }}</td>
+                                <td>{{ member.joined_date|date:"M d, Y" }}</td>
+                                <td>KES {{ member.total_savings|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
+        <!-- Group Officials -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6><i class="fas fa-user-tie"></i> Group Officials</h6>
+            </div>
+            <div class="card-body">
+                {% with chairperson=savings_group.bsg_members.all|dictsort:"role"|first %}
+                {% for member in savings_group.bsg_members.all %}
+                    {% if member.role == 'chairperson' %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div>
+                            <strong>Chairperson</strong><br>
+                            <small>{{ member.household }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if member.role == 'secretary' %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                            <i class="fas fa-pen"></i>
+                        </div>
+                        <div>
+                            <strong>Secretary</strong><br>
+                            <small>{{ member.household }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if member.role == 'treasurer' %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div>
+                            <strong>Treasurer</strong><br>
+                            <small>{{ member.household }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% empty %}
+                    <p class="text-muted mb-0">No officials assigned yet.</p>
+                {% endfor %}
+                {% endwith %}
+                {% if not savings_group.bsg_members.all %}
+                    <p class="text-muted mb-0">No officials assigned yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Savings Actions -->
         <div class="card mb-3">
             <div class="card-header bg-success text-white">
@@ -177,6 +252,23 @@
                     </a>
                     <a href="{% url 'savings_groups:export_savings_data' savings_group.pk %}" class="btn btn-outline-success">
                         <i class="fas fa-file-csv"></i> Export Savings Data
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loan Management -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6><i class="fas fa-hand-holding-usd"></i> Loan Management</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'savings_groups:loan_list' savings_group.pk %}" class="btn btn-primary">
+                        <i class="fas fa-list"></i> View All Loans
+                    </a>
+                    <a href="{% url 'savings_groups:issue_loan' savings_group.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus"></i> Issue New Loan
                     </a>
                 </div>
             </div>

@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-chalkboard-teacher"></i> {{ page_title }}</h2>
+                    <p class="text-muted">Manage training sessions and attendance</p>
+                </div>
+                <div>
+                    {% if user_role != 'mentor' or user_role in 'program_manager,me_staff,ict_admin,field_associate' %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTrainingModal">
+                        <i class="fas fa-plus"></i> Create Training
+                    </button>
+                    {% endif %}
+                    {% if user_role == 'field_associate' %}
+                    <a href="{% url 'training:fa_assignments_list' %}" class="btn btn-outline-primary ms-2">
+                        <i class="fas fa-clipboard-list"></i> My Assignments
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4>{{ total_count }}</h4>
+                    <small>Total Trainings</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h4>{{ planned_count }}</h4>
+                    <small>Planned</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4>{{ active_count }}</h4>
+                    <small>Active</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h4>{{ completed_count }}</h4>
+                    <small>Completed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Sessions Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Training Sessions</h5>
+                </div>
+                <div class="card-body">
+                    {% if training_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Module</th>
+                                    <th>Status</th>
+                                    <th>Start Date</th>
+                                    <th>Assigned Mentor</th>
+                                    <th>Enrolled</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for training in training_sessions %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ training.name }}</strong>
+                                        {% if training.description %}
+                                        <br><small class="text-muted">{{ training.description|truncatewords:8 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ training.module_id }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if training.status == 'active' %}success{% elif training.status == 'planned' %}warning{% elif training.status == 'completed' %}secondary{% else %}danger{% endif %}">
+                                            {{ training.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ training.start_date|date:"M d, Y"|default:"-" }}</td>
+                                    <td>{{ training.assigned_mentor.get_full_name|default:"Not assigned" }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ training.enrolled_count }}/{{ training.max_households }}</span>
+                                        {% if training.total_attendance_records > 0 %}
+                                        <br><small class="text-muted">
+                                            {% widthratio training.present_count training.total_attendance_records 100 %}% present
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'training:training_details' training.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'training:manage_attendance' training.id %}" class="btn btn-sm btn-outline-success" title="Manage Attendance">
+                                                <i class="fas fa-user-check"></i>
+                                            </a>
+                                            {% if user_role in 'program_manager,me_staff,ict_admin' or user.is_superuser %}
+                                            <a href="{% url 'training:training_assign_mentors' training.id %}" class="btn btn-sm btn-outline-info" title="Assign Mentors">
+                                                <i class="fas fa-user-plus"></i>
+                                            </a>
+                                            {% endif %}
+                                            <a href="{% url 'training:edit_training' training.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chalkboard fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No training sessions found</p>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTrainingModal">
+                            <i class="fas fa-plus"></i> Create Your First Training
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Training Modal -->
+<div class="modal fade" id="createTrainingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Create New Training</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'training:create_training' %}" id="createTrainingForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Training Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required placeholder="e.g., Module 1 - Business Basics">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Module ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="module_id" required placeholder="e.g., M1">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">BM Cycle</label>
+                            <select class="form-select" name="bm_cycle">
+                                <option value="">-- Select BM Cycle --</option>
+                                {% for cycle in bm_cycles %}
+                                <option value="{{ cycle.id }}">{{ cycle }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Assigned Mentor</label>
+                            <select class="form-select" name="assigned_mentor">
+                                <option value="">-- Select Mentor --</option>
+                                {% for mentor in available_mentors %}
+                                <option value="{{ mentor.id }}" {% if current_mentor_user and mentor.id == current_mentor_user.id %}selected{% endif %}>
+                                    {{ mentor.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Households</label>
+                            <input type="number" class="form-control" name="max_households" value="25" min="1" max="50">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="planned">Planned</option>
+                                <option value="active">Active</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2" placeholder="Brief description of the training"></textarea>
+                    </div>
+
+                    <!-- Field Associate Assignment Section -->
+                    {% if can_assign_fa and field_associates %}
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Assign Field Associates</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Select Field Associates to manage this training. They will be able to assign mentors.</p>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="select_all_fas">
+                                <label class="form-check-label fw-bold" for="select_all_fas">
+                                    Select All Field Associates ({{ field_associates|length }})
+                                </label>
+                            </div>
+
+                            <div id="fa-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                {% for fa in field_associates %}
+                                <div class="form-check">
+                                    <input class="form-check-input fa-checkbox" type="checkbox"
+                                           name="field_associates[]" value="{{ fa.id }}" id="fa-{{ fa.id }}">
+                                    <label class="form-check-label" for="fa-{{ fa.id }}">
+                                        {{ fa.get_full_name }}
+                                        {% if fa.email %}<small class="text-muted">({{ fa.email }})</small>{% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> Selected FAs will receive a notification to assign mentors from their team.</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Training
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select All FAs functionality
+    const selectAllFAs = document.getElementById('select_all_fas');
+    if (selectAllFAs) {
+        selectAllFAs.addEventListener('change', function() {
+            document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+                cb.checked = selectAllFAs.checked;
+            });
+        });
+
+        // Update Select All when individual checkboxes change
+        document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const totalFAs = document.querySelectorAll('.fa-checkbox').length;
+                const checkedFAs = document.querySelectorAll('.fa-checkbox:checked').length;
+                selectAllFAs.checked = (totalFAs === checkedFAs);
+                selectAllFAs.indeterminate = (checkedFAs > 0 && checkedFAs < totalFAs);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -21,4 +21,15 @@ urlpatterns = [
     path('<int:pk>/record-savings/', views.record_savings, name='record_savings'),
     path('<int:pk>/savings-report/', views.savings_report, name='savings_report'),
     path('<int:pk>/export-savings/', views.export_savings_data, name='export_savings_data'),
+
+    # Savings record edit/delete (PM only)
+    path('<int:pk>/savings-record/<int:record_id>/edit/', views.edit_savings_record, name='edit_savings_record'),
+    path('<int:pk>/savings-record/<int:record_id>/delete/', views.delete_savings_record, name='delete_savings_record'),
+
+    # Loan management
+    path('loans/all/', views.all_active_loans, name='all_active_loans'),
+    path('<int:pk>/loans/', views.loan_list, name='loan_list'),
+    path('<int:pk>/loans/record/', views.issue_loan, name='issue_loan'),
+    path('<int:pk>/loans/<int:loan_id>/', views.loan_detail, name='loan_detail'),
+    path('<int:pk>/loans/<int:loan_id>/repayment/', views.record_repayment, name='record_repayment'),
 ]

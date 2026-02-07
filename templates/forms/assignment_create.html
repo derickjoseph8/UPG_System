@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Assign Form - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-clipboard-check"></i> Assign Form to Mentor</h2>
+            <p class="text-muted">Create a new form assignment</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="form_template" class="form-label">Form Template <span class="text-danger">*</span></label>
+                            <select class="form-control" id="form_template" name="form_template" required>
+                                <option value="">-- Select Form --</option>
+                                {% for template in form_templates %}
+                                <option value="{{ template.id }}">{{ template.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="mentor" class="form-label">Assign To (Mentor) <span class="text-danger">*</span></label>
+                            <select class="form-control" id="mentor" name="mentor" required>
+                                <option value="">-- Select Mentor --</option>
+                                {% for mentor in mentors %}
+                                <option value="{{ mentor.id }}">{{ mentor.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="household" class="form-label">Household (Optional)</label>
+                            <select class="form-control" id="household" name="household">
+                                <option value="">-- Select Household --</option>
+                                {% for household in households %}
+                                <option value="{{ household.id }}">{{ household.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="business_group" class="form-label">Business Group (Optional)</label>
+                            <select class="form-control" id="business_group" name="business_group">
+                                <option value="">-- Select Business Group --</option>
+                                {% for group in business_groups %}
+                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="due_date" class="form-label">Due Date (Optional)</label>
+                            <input type="date" class="form-control" id="due_date" name="due_date">
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Assign Form
+                            </button>
+                            <a href="{% url 'forms:dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

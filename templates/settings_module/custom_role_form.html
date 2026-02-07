@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .permission-card {
+        transition: all 0.2s ease;
+    }
+    .permission-card:hover {
+        border-color: #0d6efd !important;
+    }
+    .permission-card.permission-full {
+        border-left: 4px solid #198754 !important;
+        background-color: #f8fff8;
+    }
+    .permission-card.permission-read {
+        border-left: 4px solid #ffc107 !important;
+        background-color: #fffef8;
+    }
+    .permission-card.permission-none {
+        border-left: 4px solid #6c757d !important;
+        background-color: #f8f9fa;
+    }
+    .module-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 1.2rem;
+    }
+    .permission-selector .btn-check:checked + .btn-outline-success {
+        background-color: #198754;
+        border-color: #198754;
+        color: white;
+    }
+    .permission-selector .btn-check:checked + .btn-outline-warning {
+        background-color: #ffc107;
+        border-color: #ffc107;
+        color: #000;
+    }
+    .permission-selector .btn-check:checked + .btn-outline-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-user-shield"></i> {{ page_title }}</h1>
+        <p class="text-muted">{% if role %}Edit custom role permissions{% else %}Create a new custom role with specific permissions{% endif %}</p>
+    </div>
+    <a href="{% url 'settings:custom_role_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Roles
+    </a>
+</div>
+
+<form method="post" id="roleForm">
+    {% csrf_token %}
+
+    <div class="row">
+        <!-- Basic Information -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Role Name *</label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ role.name|default:'' }}" required
+                               placeholder="e.g., Data Entry Clerk">
+                        <small class="text-muted">A unique name for this role</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="3" placeholder="Describe what this role is for...">{{ role.description|default:'' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dashboard_type" class="form-label">Dashboard Type *</label>
+                        <select class="form-select" id="dashboard_type" name="dashboard_type" required onchange="preloadPermissions()">
+                            {% for value, label in dashboard_choices %}
+                            <option value="{{ value }}" {% if role and role.dashboard_type == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Which dashboard users with this role will see. Selecting a type will auto-load suggested permissions.</small>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+                               {% if role.is_active or not role %}checked{% endif %}>
+                        <label class="form-check-label" for="is_active">
+                            <strong>Role is Active</strong>
+                        </label>
+                        <small class="text-muted d-block">Inactive roles cannot be assigned to users</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Geographic Restrictions -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-map-marked-alt"></i> Geographic Access</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="geographic_scope" class="form-label">Geographic Scope *</label>
+                        <select class="form-select" id="geographic_scope" name="geographic_scope" onchange="toggleGeographicOptions()">
+                            <option value="all" {% if role and role.geographic_scope == 'all' %}selected{% endif %}>All Villages (No Restriction)</option>
+                            <option value="county" {% if role and role.geographic_scope == 'county' %}selected{% endif %}>Specific County</option>
+                            <option value="subcounty" {% if role and role.geographic_scope == 'subcounty' %}selected{% endif %}>Specific Sub-County</option>
+                            <option value="villages" {% if role and role.geographic_scope == 'villages' %}selected{% endif %}>Specific Villages</option>
+                        </select>
+                        <small class="text-muted">Define what geographical areas users with this role can access</small>
+                    </div>
+
+                    <!-- County Selection -->
+                    <div class="mb-3" id="countyContainer" style="display: none;">
+                        <label for="allowed_county" class="form-label">Select County</label>
+                        <select class="form-select" id="allowed_county" name="allowed_county">
+                            <option value="">-- Select County --</option>
+                            {% for county in counties %}
+                            <option value="{{ county }}" {% if role and role.allowed_county == county %}selected{% endif %}>{{ county }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- SubCounty Selection -->
+                    <div class="mb-3" id="subcountyContainer" style="display: none;">
+                        <label class="form-label">Select Sub-Counties</label>
+                        <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            {% for subcounty in subcounties %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="allowed_subcounties"
+                                       value="{{ subcounty }}" id="subcounty_{{ forloop.counter }}"
+                                       {% if role and subcounty in role.allowed_subcounties %}checked{% endif %}>
+                                <label class="form-check-label" for="subcounty_{{ forloop.counter }}">{{ subcounty }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Village Selection -->
+                    <div class="mb-3" id="villageContainer" style="display: none;">
+                        <label class="form-label">Select Villages</label>
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm" id="villageSearch"
+                                   placeholder="Search villages..." onkeyup="filterVillages()">
+                        </div>
+                        <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;" id="villageList">
+                            {% for village in villages %}
+                            <div class="form-check village-item" data-name="{{ village.name|lower }}">
+                                <input class="form-check-input" type="checkbox" name="allowed_villages"
+                                       value="{{ village.id }}" id="village_{{ village.id }}"
+                                       {% if role and village in role.allowed_villages.all %}checked{% endif %}>
+                                <label class="form-check-label" for="village_{{ village.id }}">
+                                    {{ village.name }} <small class="text-muted">({{ village.subcounty }})</small>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllVillages()">Select All</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllVillages()">Deselect All</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Set Permissions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="setAllPermissions('full')">
+                            <i class="fas fa-check-double"></i> Set All to Full Access
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="setAllPermissions('read')">
+                            <i class="fas fa-eye"></i> Set All to Read Only
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setAllPermissions('none')">
+                            <i class="fas fa-ban"></i> Set All to No Access
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> {% if role %}Update Role{% else %}Create Role{% endif %}
+                </button>
+                <a href="{% url 'settings:custom_role_list' %}" class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+        </div>
+
+        <!-- Module Permissions -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Module Permissions</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Configure access levels for each module. <strong>Full Access</strong> allows create, read, update, and delete.
+                        <strong>Read Only</strong> allows viewing data only. <strong>No Access</strong> hides the module completely.
+                    </p>
+
+                    <div class="row">
+                        {% for module_key, module_name in available_modules.items %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card permission-card permission-{% if role and role.permissions %}{{ role.permissions|get_item:module_key|default:'none' }}{% else %}none{% endif %}"
+                                 id="card_{{ module_key }}">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="module-icon bg-light text-primary me-3">
+                                            <i class="fas fa-{% if module_key == 'dashboard' %}home{% elif module_key == 'programs' %}sitemap{% elif module_key == 'households' %}users{% elif module_key == 'business_groups' %}store{% elif module_key == 'savings_groups' %}piggy-bank{% elif module_key == 'surveys' %}clipboard-list{% elif module_key == 'training' %}chalkboard-teacher{% elif module_key == 'grants' %}hand-holding-usd{% elif module_key == 'reports' %}chart-bar{% elif module_key == 'settings' %}cog{% elif module_key == 'users' %}user-cog{% elif module_key == 'audit_logs' %}history{% elif module_key == 'kobo' %}mobile-alt{% else %}folder{% endif %}"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ module_name }}</h6>
+                                            <small class="text-muted">{{ module_key }}</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="permission-selector btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="permission_{{ module_key }}"
+                                               id="perm_{{ module_key }}_full" value="full"
+                                               {% if role and role.permissions and role.permissions|get_item:module_key == 'full' %}checked{% endif %}
+                                               onchange="updateCardStyle('{{ module_key }}', 'full')">
+                                        <label class="btn btn-outline-success btn-sm" for="perm_{{ module_key }}_full">
+                                            <i class="fas fa-check-circle"></i> Full
+                                        </label>
+
+                                        <input type="radio" class="btn-check" name="permission_{{ module_key }}"
+                                               id="perm_{{ module_key }}_read" value="read"
+                                               {% if role and role.permissions and role.permissions|get_item:module_key == 'read' %}checked{% endif %}
+                                               onchange="updateCardStyle('{{ module_key }}', 'read')">
+                                        <label class="btn btn-outline-warning btn-sm" for="perm_{{ module_key }}_read">
+                                            <i class="fas fa-eye"></i> Read
+                                        </label>
+
+                                        <input type="radio" class="btn-check" name="permission_{{ module_key }}"
+                                               id="perm_{{ module_key }}_none" value="none"
+                                               {% if not role or not role.permissions or role.permissions|get_item:module_key == 'none' or module_key not in role.permissions %}checked{% endif %}
+                                               onchange="updateCardStyle('{{ module_key }}', 'none')">
+                                        <label class="btn btn-outline-secondary btn-sm" for="perm_{{ module_key }}_none">
+                                            <i class="fas fa-ban"></i> None
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateCardStyle(moduleKey, level) {
+    const card = document.getElementById(`card_${moduleKey}`);
+    card.classList.remove('permission-full', 'permission-read', 'permission-none');
+    card.classList.add(`permission-${level}`);
+}
+
+function setAllPermissions(level) {
+    // Get all module keys from the form
+    document.querySelectorAll('[name^="permission_"]').forEach(input => {
+        const moduleKey = input.name.replace('permission_', '');
+        if (input.value === level) {
+            input.checked = true;
+            updateCardStyle(moduleKey, level);
+        }
+    });
+}
+
+function setPermission(moduleKey, level) {
+    // Set a specific module's permission level
+    const input = document.getElementById(`perm_${moduleKey}_${level}`);
+    if (input) {
+        input.checked = true;
+        updateCardStyle(moduleKey, level);
+    }
+}
+
+function preloadPermissions() {
+    // Preload permissions based on selected dashboard type
+    const dashboardType = document.getElementById('dashboard_type').value;
+
+    // Define permission presets for each dashboard type
+    const presets = {
+        'admin': {
+            'dashboard': 'full', 'programs': 'full', 'households': 'full',
+            'business_groups': 'full', 'savings_groups': 'full', 'surveys': 'full',
+            'training': 'full', 'grants': 'full', 'reports': 'full',
+            'settings': 'full', 'users': 'full', 'audit_logs': 'full', 'kobo': 'full'
+        },
+        'executive': {
+            'dashboard': 'full', 'programs': 'read', 'households': 'read',
+            'business_groups': 'read', 'savings_groups': 'read', 'surveys': 'read',
+            'training': 'read', 'grants': 'read', 'reports': 'full',
+            'settings': 'none', 'users': 'none', 'audit_logs': 'read', 'kobo': 'none'
+        },
+        'me': {
+            'dashboard': 'full', 'programs': 'read', 'households': 'full',
+            'business_groups': 'full', 'savings_groups': 'full', 'surveys': 'full',
+            'training': 'full', 'grants': 'read', 'reports': 'full',
+            'settings': 'none', 'users': 'none', 'audit_logs': 'read', 'kobo': 'full'
+        },
+        'field_associate': {
+            'dashboard': 'full', 'programs': 'read', 'households': 'full',
+            'business_groups': 'full', 'savings_groups': 'full', 'surveys': 'full',
+            'training': 'full', 'grants': 'full', 'reports': 'read',
+            'settings': 'none', 'users': 'none', 'audit_logs': 'none', 'kobo': 'read'
+        },
+        'mentor': {
+            'dashboard': 'full', 'programs': 'read', 'households': 'full',
+            'business_groups': 'full', 'savings_groups': 'full', 'surveys': 'full',
+            'training': 'full', 'grants': 'read', 'reports': 'read',
+            'settings': 'none', 'users': 'none', 'audit_logs': 'none', 'kobo': 'read'
+        },
+        'general': {
+            'dashboard': 'read', 'programs': 'read', 'households': 'read',
+            'business_groups': 'read', 'savings_groups': 'read', 'surveys': 'none',
+            'training': 'read', 'grants': 'read', 'reports': 'read',
+            'settings': 'none', 'users': 'none', 'audit_logs': 'none', 'kobo': 'none'
+        }
+    };
+
+    const preset = presets[dashboardType];
+    if (preset) {
+        // Apply each permission from the preset
+        for (const [moduleKey, level] of Object.entries(preset)) {
+            setPermission(moduleKey, level);
+        }
+    }
+}
+
+// Geographic scope toggle
+function toggleGeographicOptions() {
+    const scope = document.getElementById('geographic_scope').value;
+    document.getElementById('countyContainer').style.display = scope === 'county' ? 'block' : 'none';
+    document.getElementById('subcountyContainer').style.display = scope === 'subcounty' ? 'block' : 'none';
+    document.getElementById('villageContainer').style.display = scope === 'villages' ? 'block' : 'none';
+}
+
+// Village search filter
+function filterVillages() {
+    const search = document.getElementById('villageSearch').value.toLowerCase();
+    document.querySelectorAll('.village-item').forEach(item => {
+        const name = item.dataset.name;
+        item.style.display = name.includes(search) ? 'block' : 'none';
+    });
+}
+
+function selectAllVillages() {
+    document.querySelectorAll('#villageList input[type="checkbox"]').forEach(cb => {
+        if (cb.closest('.village-item').style.display !== 'none') {
+            cb.checked = true;
+        }
+    });
+}
+
+function deselectAllVillages() {
+    document.querySelectorAll('#villageList input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize permission card styles
+    document.querySelectorAll('[name^="permission_"]:checked').forEach(input => {
+        const moduleKey = input.name.replace('permission_', '');
+        updateCardStyle(moduleKey, input.value);
+    });
+
+    // Initialize geographic options
+    toggleGeographicOptions();
+});
+</script>
+{% endblock %}

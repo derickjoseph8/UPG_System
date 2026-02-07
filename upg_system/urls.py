@@ -7,6 +7,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 
+# Custom error handlers
+handler400 = 'core.error_handlers.handler400'
+handler403 = 'core.error_handlers.handler403'
+handler404 = 'core.error_handlers.handler404'
+handler500 = 'core.error_handlers.handler500'
+
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
@@ -29,6 +35,11 @@ urlpatterns = [
     path('upg-grants/', include('upg_grants.urls')),
     path('settings/', include('settings_module.urls')),
     path('core/', include('core.urls')),
+    path('forms/', include('forms.urls')),
+    path('enrollment/', include('enrollment.urls')),  # Enrollment and targeting
+
+    # VE Reporting API (Silent - no UI, external API for VE Data Hub)
+    path('api/v1/ve-reporting/', include('ve_reporting.urls')),
 ]
 
 # Serve media files in development

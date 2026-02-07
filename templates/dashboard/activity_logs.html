@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block title %}Activity Logs - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-clipboard-list"></i> Activity Logs</h1>
+    <div>
+        {% if can_export %}
+        <a href="{% url 'dashboard:export_activity_logs' %}?period={{ period }}&mentor={{ mentor_id }}&type={{ activity_type }}" class="btn btn-success">
+            <i class="fas fa-download"></i> Export CSV
+        </a>
+        {% endif %}
+        <a href="{% url 'dashboard:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Period Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="period" class="form-label">Time Period</label>
+                <select name="period" id="period" class="form-select">
+                    <option value="1" {% if period == '1' %}selected{% endif %}>Current Month</option>
+                    <option value="6" {% if period == '6' %}selected{% endif %}>Last 6 Months</option>
+                    <option value="12" {% if period == '12' %}selected{% endif %}>Last 12 Months</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="mentor" class="form-label">Mentor</label>
+                <select name="mentor" id="mentor" class="form-select">
+                    <option value="">All Mentors</option>
+                    {% for mentor in available_mentors %}
+                    <option value="{{ mentor.id }}" {% if mentor_id == mentor.id|stringformat:"i" %}selected{% endif %}>
+                        {{ mentor.get_full_name|default:mentor.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="type" class="form-label">Activity Type</label>
+                <select name="type" id="type" class="form-select">
+                    <option value="all" {% if activity_type == 'all' %}selected{% endif %}>All Activities</option>
+                    <option value="visits" {% if activity_type == 'visits' %}selected{% endif %}>Visits Only</option>
+                    <option value="calls" {% if activity_type == 'calls' %}selected{% endif %}>Calls Only</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Apply Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Period Summary -->
+<div class="alert alert-info">
+    <i class="fas fa-calendar-alt me-2"></i>
+    <strong>Showing data for:</strong> {{ period_label }}
+    ({{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }})
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3>{{ total_visits }}</h3>
+                <p class="mb-0">Total Visits</p>
+                <small>{{ visit_hours }}h {{ visit_minutes }}m</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3>{{ total_calls }}</h3>
+                <p class="mb-0">Total Calls</p>
+                <small>{{ call_hours }}h {{ call_minutes }}m</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ total_visits|add:total_calls }}</h3>
+                <p class="mb-0">Total Activities</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h3>{{ total_hours }}h {{ total_minutes }}m</h3>
+                <p class="mb-0">Total Time</p>
+                <small>{{ total_duration }} minutes</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Breakdown (for 6 or 12 month views) -->
+{% if monthly_data %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Monthly Breakdown</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th class="text-center">Visits</th>
+                        <th class="text-center">Calls</th>
+                        <th class="text-center">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for month in monthly_data %}
+                    <tr>
+                        <td>{{ month.month }}</td>
+                        <td class="text-center"><span class="badge bg-success">{{ month.visits }}</span></td>
+                        <td class="text-center"><span class="badge bg-info">{{ month.calls }}</span></td>
+                        <td class="text-center"><strong>{{ month.total }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-dark">
+                    <tr>
+                        <th>Total</th>
+                        <th class="text-center">{{ total_visits }}</th>
+                        <th class="text-center">{{ total_calls }}</th>
+                        <th class="text-center">{{ total_visits|add:total_calls }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Activities Detail -->
+<div class="row">
+    <!-- Visits List -->
+    {% if activity_type != 'calls' %}
+    <div class="{% if activity_type == 'all' %}col-lg-6{% else %}col-12{% endif %}">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-walking"></i> Visits ({{ total_visits }})</h5>
+                <span class="badge bg-light text-dark">{{ visit_hours }}h {{ visit_minutes }}m total</span>
+            </div>
+            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                {% if visits %}
+                <div class="list-group list-group-flush">
+                    {% for visit in visits %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-home text-success me-1"></i>
+                                {{ visit.household.name|default:"N/A" }}
+                            </h6>
+                            <small class="text-muted">
+                                {{ visit.visit_date|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                        <p class="mb-1">
+                            <span class="badge bg-secondary">{{ visit.get_visit_type_display }}</span>
+                            {% if visit.duration_minutes %}
+                            <span class="badge bg-outline-dark">{{ visit.duration_minutes }} min</span>
+                            {% endif %}
+                        </p>
+                        <small class="text-muted">
+                            <i class="fas fa-user"></i> {{ visit.mentor.get_full_name|default:visit.mentor.username }}
+                            {% if visit.topic %} | {{ visit.topic|truncatewords:10 }}{% endif %}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No visits found for this period.</p>
+                {% endif %}
+            </div>
+            {% if visits %}
+            <div class="card-footer bg-light">
+                <strong>Total Visit Time: {{ visit_hours }} hours {{ visit_minutes }} minutes ({{ total_visit_duration }} min)</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Calls List -->
+    {% if activity_type != 'visits' %}
+    <div class="{% if activity_type == 'all' %}col-lg-6{% else %}col-12{% endif %}">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-phone"></i> Phone Calls ({{ total_calls }})</h5>
+                <span class="badge bg-light text-dark">{{ call_hours }}h {{ call_minutes }}m total</span>
+            </div>
+            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                {% if calls %}
+                <div class="list-group list-group-flush">
+                    {% for call in calls %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-phone text-info me-1"></i>
+                                {{ call.household.name|default:"N/A" }}
+                            </h6>
+                            <small class="text-muted">
+                                {{ call.call_date|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                        <p class="mb-1">
+                            <span class="badge bg-secondary">{{ call.get_nudge_type_display }}</span>
+                            {% if call.duration_minutes %}
+                            <span class="badge bg-outline-dark">{{ call.duration_minutes }} min</span>
+                            {% endif %}
+                            {% if call.successful_contact %}
+                            <span class="badge bg-success">Connected</span>
+                            {% else %}
+                            <span class="badge bg-danger">No Answer</span>
+                            {% endif %}
+                        </p>
+                        <small class="text-muted">
+                            <i class="fas fa-user"></i> {{ call.mentor.get_full_name|default:call.mentor.username }}
+                            {% if call.notes %} | {{ call.notes|truncatewords:10 }}{% endif %}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No calls found for this period.</p>
+                {% endif %}
+            </div>
+            {% if calls %}
+            <div class="card-footer bg-light">
+                <strong>Total Call Time: {{ call_hours }} hours {{ call_minutes }} minutes ({{ total_call_duration }} min)</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Grand Total Footer -->
+<div class="card bg-dark text-white">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h4>{{ total_visits|add:total_calls }}</h4>
+                <p class="mb-0">Total Activities</p>
+            </div>
+            <div class="col-md-4">
+                <h4>{{ total_hours }}h {{ total_minutes }}m</h4>
+                <p class="mb-0">Total Time Spent</p>
+            </div>
+            <div class="col-md-4">
+                <h4>{{ total_duration }}</h4>
+                <p class="mb-0">Total Minutes</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

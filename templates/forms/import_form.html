@@ -1,0 +1,557 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import Form Template - UPG MIS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .import-card {
+        border: 2px dashed #dee2e6;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    .import-card:hover {
+        border-color: #0d6efd;
+        background: #f8f9fa;
+    }
+    .import-card.dragover {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+    }
+    .import-icon {
+        font-size: 4rem;
+        color: #6c757d;
+    }
+    .import-card:hover .import-icon {
+        color: #0d6efd;
+    }
+    .format-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin: 4px;
+    }
+    .format-json {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .format-xml {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+    .format-kobo {
+        background: #cfe2ff;
+        color: #084298;
+    }
+    .kobo-asset-item {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .kobo-asset-item:hover {
+        border-color: #0d6efd;
+        background: #f8f9fa;
+    }
+    .kobo-asset-item.selected {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+    }
+    .kobo-asset-item.imported {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .preview-section {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .preview-field {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        border-left: 3px solid #0d6efd;
+    }
+    .preview-field.section {
+        border-left-color: #198754;
+        background: #d1e7dd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-file-import"></i> Import Form Template</h2>
+                    <p class="text-muted">Import forms from JSON, XML, or directly from KoboToolbox</p>
+                </div>
+                <div>
+                    <a href="{% url 'forms:template_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Forms
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- File Upload Section -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-upload"></i> Upload Form File</h5>
+                </div>
+                <div class="card-body">
+                    <div class="import-card p-5 text-center" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt import-icon mb-3"></i>
+                        <h4>Drop file here or click to browse</h4>
+                        <p class="text-muted mb-3">
+                            Supported formats:
+                        </p>
+                        <div>
+                            <span class="format-badge format-json"><i class="fas fa-code"></i> JSON</span>
+                            <span class="format-badge format-xml"><i class="fas fa-file-code"></i> XML/XForm</span>
+                        </div>
+                        <input type="file" id="fileInput" class="d-none" accept=".json,.xml,.xform">
+                    </div>
+
+                    <div id="filePreview" class="mt-4" style="display: none;">
+                        <div class="alert alert-info">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file me-2"></i>
+                                    <strong id="fileName"></strong>
+                                    <small class="text-muted ms-2" id="fileSize"></small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="parseResult" style="display: none;">
+                            <h6><i class="fas fa-eye"></i> Preview</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Form Name</label>
+                                <input type="text" class="form-control" id="importFormName" placeholder="Form name">
+                            </div>
+                            <div class="preview-section border rounded p-3">
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-list"></i> <span id="fieldCount">0</span> fields found
+                                </p>
+                                <div id="fieldsList"></div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-lg w-100 mt-3" id="importFileBtn" onclick="importFromFile()">
+                            <i class="fas fa-file-import"></i> Import Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import from KoboToolbox Section -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-cloud-download-alt"></i> Import from KoboToolbox</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Import existing forms directly from your KoboToolbox account.
+                        This will preserve the original structure and link the form for future syncs.
+                    </p>
+
+                    <button type="button" class="btn btn-outline-success w-100 mb-3" id="loadKoboFormsBtn" onclick="loadKoboForms()">
+                        <i class="fas fa-sync"></i> Load Forms from KoboToolbox
+                    </button>
+
+                    <div id="koboLoading" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
+                        <p class="mt-2 text-muted">Loading forms from KoboToolbox...</p>
+                    </div>
+
+                    <div id="koboError" class="alert alert-danger" style="display: none;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="koboErrorMessage"></span>
+                    </div>
+
+                    <div id="koboFormsList" style="display: none;">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="koboSearchInput" placeholder="Search forms..." oninput="filterKoboForms()">
+                        </div>
+                        <div id="koboAssets" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Forms will be loaded here -->
+                        </div>
+                        <button type="button" class="btn btn-success btn-lg w-100 mt-3" id="importKoboBtn" onclick="importFromKobo()" disabled>
+                            <i class="fas fa-download"></i> Import Selected Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Format Help Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Supported Import Formats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6><span class="format-badge format-json"><i class="fas fa-code"></i> JSON</span></h6>
+                            <p class="small text-muted">
+                                Import XLSForm JSON (from KoboToolbox export) or UPG internal format.
+                                Preserves all field types, choices, validation rules, and conditional logic.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><span class="format-badge format-xml"><i class="fas fa-file-code"></i> XML/XForm</span></h6>
+                            <p class="small text-muted">
+                                Import ODK/XForm XML format used by many data collection platforms.
+                                Supports groups, select fields, and basic validation.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><span class="format-badge format-kobo"><i class="fas fa-cloud"></i> KoboToolbox</span></h6>
+                            <p class="small text-muted">
+                                Direct import from your KoboToolbox account. The form will be linked
+                                for bi-directional sync. Requires API token configuration.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Progress Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <h4>Importing Form...</h4>
+                <p class="text-muted">Please wait while we process your form.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedFile = null;
+    let parsedData = null;
+    let selectedKoboAsset = null;
+    let koboAssets = [];
+
+    // Drag and drop handling
+    const dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    // File input change handler
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        selectedFile = file;
+
+        // Show file info
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('filePreview').style.display = 'block';
+
+        // Parse file
+        parseFile(file);
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function parseFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            previewParsedContent(content, file.name);
+        };
+        reader.readAsText(file);
+    }
+
+    function previewParsedContent(content, filename) {
+        // Simple client-side preview (actual parsing happens server-side)
+        try {
+            let formName = 'Imported Form';
+            let fieldsPreview = [];
+
+            if (filename.endsWith('.json')) {
+                const data = JSON.parse(content);
+
+                // XLSForm JSON
+                if (data.survey) {
+                    formName = data.settings?.form_title || 'Imported Form';
+                    fieldsPreview = data.survey.filter(row =>
+                        !['start', 'end', 'deviceid', 'username', 'phonenumber'].includes(row.type)
+                    ).map(row => ({
+                        name: row.name || row.label,
+                        label: row.label || row.name,
+                        type: row.type,
+                        isSection: row.type === 'begin_group' || row.type === 'begin group'
+                    }));
+                }
+                // UPG format
+                else if (data.fields || data.form_fields) {
+                    formName = data.name || 'Imported Form';
+                    const fields = data.fields || data.form_fields || [];
+                    fieldsPreview = fields.map(f => ({
+                        name: f.name || f.field_name,
+                        label: f.label || f.field_label,
+                        type: f.type || f.field_type,
+                        isSection: ['section', 'group'].includes(f.type || f.field_type)
+                    }));
+                }
+            } else if (filename.endsWith('.xml')) {
+                formName = 'XML Form Import';
+                // Basic XML preview - count elements
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, 'text/xml');
+                const inputs = doc.querySelectorAll('input, select, select1, upload, group');
+                fieldsPreview = Array.from(inputs).slice(0, 20).map(el => ({
+                    name: el.getAttribute('ref')?.split('/').pop() || 'field',
+                    label: el.querySelector('label')?.textContent || 'Untitled',
+                    type: el.tagName.toLowerCase(),
+                    isSection: el.tagName.toLowerCase() === 'group'
+                }));
+            }
+
+            // Update UI
+            document.getElementById('importFormName').value = formName;
+            document.getElementById('fieldCount').textContent = fieldsPreview.length;
+
+            const fieldsList = document.getElementById('fieldsList');
+            fieldsList.innerHTML = fieldsPreview.slice(0, 15).map(f => `
+                <div class="preview-field ${f.isSection ? 'section' : ''}">
+                    <strong>${f.label || f.name}</strong>
+                    <span class="badge bg-secondary ms-2">${f.type}</span>
+                </div>
+            `).join('');
+
+            if (fieldsPreview.length > 15) {
+                fieldsList.innerHTML += `<p class="text-muted text-center">... and ${fieldsPreview.length - 15} more fields</p>`;
+            }
+
+            document.getElementById('parseResult').style.display = 'block';
+            parsedData = { formName, fieldsPreview };
+
+        } catch (err) {
+            document.getElementById('parseResult').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Could not preview file. It will still be parsed on import.
+                </div>
+            `;
+            document.getElementById('parseResult').style.display = 'block';
+        }
+    }
+
+    function clearFile() {
+        selectedFile = null;
+        parsedData = null;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('filePreview').style.display = 'none';
+        document.getElementById('parseResult').style.display = 'none';
+    }
+
+    function importFromFile() {
+        if (!selectedFile) {
+            alert('Please select a file first');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('form_file', selectedFile);
+
+        // Show loading modal
+        const modal = new bootstrap.Modal(document.getElementById('importModal'));
+        modal.show();
+
+        fetch('{% url "forms:import_template" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            modal.hide();
+            if (data.success) {
+                alert(data.message);
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            modal.hide();
+            alert('Error importing form: ' + error);
+        });
+    }
+
+    // KoboToolbox import functions
+    function loadKoboForms() {
+        document.getElementById('loadKoboFormsBtn').disabled = true;
+        document.getElementById('koboLoading').style.display = 'block';
+        document.getElementById('koboError').style.display = 'none';
+        document.getElementById('koboFormsList').style.display = 'none';
+
+        fetch('{% url "forms:import_from_kobo" %}', {
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('koboLoading').style.display = 'none';
+            document.getElementById('loadKoboFormsBtn').disabled = false;
+
+            if (data.success) {
+                koboAssets = data.assets;
+                renderKoboForms(koboAssets);
+                document.getElementById('koboFormsList').style.display = 'block';
+            } else {
+                document.getElementById('koboErrorMessage').textContent = data.message;
+                document.getElementById('koboError').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            document.getElementById('koboLoading').style.display = 'none';
+            document.getElementById('loadKoboFormsBtn').disabled = false;
+            document.getElementById('koboErrorMessage').textContent = 'Failed to connect to KoboToolbox';
+            document.getElementById('koboError').style.display = 'block';
+        });
+    }
+
+    function renderKoboForms(assets) {
+        const container = document.getElementById('koboAssets');
+
+        if (assets.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-3">No forms found in your KoboToolbox account</p>';
+            return;
+        }
+
+        container.innerHTML = assets.map(asset => `
+            <div class="kobo-asset-item ${asset.already_imported ? 'imported' : ''}"
+                 onclick="${asset.already_imported ? '' : `selectKoboAsset('${asset.uid}')`}"
+                 data-uid="${asset.uid}"
+                 data-name="${asset.name.toLowerCase()}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${asset.name}</strong>
+                        ${asset.already_imported ? '<span class="badge bg-secondary ms-2">Already Imported</span>' : ''}
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i> ${new Date(asset.date_created).toLocaleDateString()}
+                            ${asset.deployment_status ? '<span class="badge bg-success ms-2">Deployed</span>' : '<span class="badge bg-warning ms-2">Draft</span>'}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-info">${asset.submissions_count} submissions</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function filterKoboForms() {
+        const search = document.getElementById('koboSearchInput').value.toLowerCase();
+        const filtered = koboAssets.filter(a => a.name.toLowerCase().includes(search));
+        renderKoboForms(filtered);
+    }
+
+    function selectKoboAsset(uid) {
+        selectedKoboAsset = uid;
+
+        // Update UI
+        document.querySelectorAll('.kobo-asset-item').forEach(el => {
+            el.classList.remove('selected');
+            if (el.dataset.uid === uid) {
+                el.classList.add('selected');
+            }
+        });
+
+        document.getElementById('importKoboBtn').disabled = false;
+    }
+
+    function importFromKobo() {
+        if (!selectedKoboAsset) {
+            alert('Please select a form to import');
+            return;
+        }
+
+        // Show loading modal
+        const modal = new bootstrap.Modal(document.getElementById('importModal'));
+        modal.show();
+
+        fetch('{% url "forms:import_from_kobo" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ asset_uid: selectedKoboAsset })
+        })
+        .then(response => response.json())
+        .then(data => {
+            modal.hide();
+            if (data.success) {
+                alert(data.message);
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            modal.hide();
+            alert('Error importing form: ' + error);
+        });
+    }
+</script>
+{% endblock %}

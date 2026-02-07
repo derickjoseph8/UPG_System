@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-clipboard-list"></i> {{ page_title }}</h2>
+                    <p class="text-muted">Forms assigned to you for mentor management</p>
+                </div>
+                <div>
+                    <a href="{% url 'forms:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if fa_assignments %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-file-alt"></i> Forms Assigned to You ({{ fa_assignments|length }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Form Name</th>
+                                    <th>Form Type</th>
+                                    <th>Status</th>
+                                    <th>Assigned By</th>
+                                    <th>Assigned Date</th>
+                                    <th>Mentors Assigned</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in fa_assignments %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ assignment.form_template.name }}</strong>
+                                        {% if assignment.form_template.description %}
+                                        <br><small class="text-muted">{{ assignment.form_template.description|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ assignment.form_template.get_form_type_display }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if assignment.form_template.status == 'active' %}success{% elif assignment.form_template.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                            {{ assignment.form_template.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ assignment.assigned_by.get_full_name }}</td>
+                                    <td>{{ assignment.assigned_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ assignment.mentor_assignments.count }} mentor(s)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'forms:form_assign_mentors' assignment.form_template.id %}"
+                                               class="btn btn-sm btn-primary" title="Assign Mentors">
+                                                <i class="fas fa-user-plus"></i> Assign Mentors
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Forms Assigned Yet</h5>
+                    <p class="text-muted">You don't have any forms assigned to you for mentor management.</p>
+                    <p class="text-muted">Contact your Program Manager or M&E staff to get forms assigned.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Assignment Stats -->
+    {% if fa_assignments %}
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>{{ fa_assignments|length }}</h3>
+                    <p class="mb-0">Total Forms Assigned</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>
+                        {% with active_count=0 %}
+                        {% for a in fa_assignments %}
+                            {% if a.form_template.status == 'active' %}
+                                {% with active_count=active_count|add:1 %}{% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ active_count|default:0 }}
+                        {% endwith %}
+                    </h3>
+                    <p class="mb-0">Active Forms</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3>
+                        {% with total_mentors=0 %}
+                        {% for a in fa_assignments %}
+                            {% with total_mentors=total_mentors|add:a.mentor_assignments.count %}{% endwith %}
+                        {% endfor %}
+                        {{ total_mentors|default:0 }}
+                        {% endwith %}
+                    </h3>
+                    <p class="mb-0">Total Mentors Assigned</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

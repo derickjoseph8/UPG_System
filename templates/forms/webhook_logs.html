@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}KoboToolbox Webhook Logs{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-satellite-dish"></i> KoboToolbox Webhook Logs</h2>
+                    <p class="text-muted">Incoming form submissions from KoboCollect</p>
+                </div>
+                <div>
+                    <a href="{% url 'forms:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Form</label>
+                            <select name="form_id" class="form-select">
+                                <option value="">All Forms</option>
+                                {% for form_id, form_name in available_forms %}
+                                <option value="{{ form_id }}" {% if form_id_filter == form_id|stringformat:"s" %}selected{% endif %}>
+                                    {{ form_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a href="{% url 'forms:kobo_webhook_logs' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo"></i> Reset
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webhook Logs Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Webhook Submissions</h5>
+                </div>
+                <div class="card-body">
+                    {% if webhook_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Received</th>
+                                    <th>Form</th>
+                                    <th>Submission UUID</th>
+                                    <th>Status</th>
+                                    <th>Linked Submission</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in webhook_logs %}
+                                <tr>
+                                    <td>{{ log.received_at|date:"M d, Y H:i:s" }}</td>
+                                    <td>
+                                        {% if log.form_template %}
+                                            <a href="{% url 'forms:template_builder' log.form_template.id %}">
+                                                {{ log.form_template.name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Unknown Form</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code class="small">{{ log.submission_uuid|truncatechars:20 }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if log.status == 'processed' %}success{% elif log.status == 'failed' %}danger{% elif log.status == 'duplicate' %}warning{% else %}secondary{% endif %}">
+                                            {{ log.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if log.form_submission %}
+                                            <a href="{% url 'forms:submission_detail' log.form_submission.id %}">
+                                                Submission #{{ log.form_submission.id }}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewWebhookDetails({{ log.id }})">
+                                            <i class="fas fa-info-circle"></i> View Payload
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% if log.error_message %}
+                                <tr class="table-danger">
+                                    <td colspan="6">
+                                        <small><strong>Error:</strong> {{ log.error_message }}</small>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if form_id_filter %}&form_id={{ form_id_filter }}{% endif %}">Previous</a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num or num == 1 or num == page_obj.paginator.num_pages or num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if form_id_filter %}&form_id={{ form_id_filter }}{% endif %}">{{ num }}</a>
+                            </li>
+                            {% elif num == 2 or num == page_obj.paginator.num_pages|add:"-1" %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if form_id_filter %}&form_id={{ form_id_filter }}{% endif %}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No webhook submissions received yet</p>
+                        <small class="text-muted">
+                            Webhooks are automatically configured when forms are synced to KoboToolbox
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Webhook Details Modal -->
+<div class="modal fade" id="webhookDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Webhook Payload Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="webhookDetailsContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewWebhookDetails(logId) {
+    // TODO: Implement AJAX call to get webhook payload
+    const modal = new bootstrap.Modal(document.getElementById('webhookDetailsModal'));
+    document.getElementById('webhookDetailsContent').innerHTML = `
+        <div class="alert alert-info">
+            Webhook log ID: ${logId}<br>
+            Payload viewer will be implemented via AJAX
+        </div>
+    `;
+    modal.show();
+}
+</script>
+{% endblock %}

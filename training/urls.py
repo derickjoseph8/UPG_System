@@ -19,6 +19,10 @@ urlpatterns = [
     path('attendance/<int:attendance_id>/toggle/', views.toggle_attendance, name='toggle_attendance'),
     path('attendance/<int:attendance_id>/remove/', views.remove_attendance, name='remove_attendance'),
 
+    # FA Assignment URLs
+    path('my-fa-assignments/', views.training_fa_assignments_list, name='fa_assignments_list'),
+    path('<int:training_id>/assign-mentors/', views.training_assign_mentors, name='training_assign_mentors'),
+
     # Mentoring URLs
     path('mentoring/', mentoring_views.mentoring_dashboard, name='mentoring_dashboard'),
     path('mentoring/reports/', mentoring_views.mentoring_reports, name='mentoring_reports'),

@@ -11,6 +11,7 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = 'Profile'
+    fk_name = 'user'  # Specify which FK to use (not supervisor)
 
 
 class UserAdmin(BaseUserAdmin):

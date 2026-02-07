@@ -10,6 +10,37 @@
     </a>
 </div>
 
+<!-- Search Bar -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Search savings groups by name..." value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                {% if search_query %}
+                <a href="{% url 'savings_groups:savings_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if search_query %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    Showing results for "<strong>{{ search_query }}</strong>" - {{ savings_groups|length }} group(s) found
+</div>
+{% endif %}
+
 <!-- Statistics Cards -->
 <div class="row mb-4">
     <div class="col-md-3">
@@ -30,21 +61,7 @@
         <div class="stat-card stat-card-green">
             <div class="d-flex justify-content-between">
                 <div>
-                    <h3>{{ savings_groups|length }}</h3>
-                    <p class="mb-0">Active Groups</p>
-                </div>
-                <div class="align-self-center">
-                    <i class="fas fa-check-circle fa-2x"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="stat-card stat-card-orange">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <h3>KES 0</h3>
+                    <h3>KES {{ total_savings|floatformat:0|default:0 }}</h3>
                     <p class="mb-0">Total Savings</p>
                 </div>
                 <div class="align-self-center">
@@ -55,10 +72,27 @@
     </div>
 
     <div class="col-md-3">
+        <a href="{% url 'savings_groups:all_active_loans' %}" class="text-decoration-none">
+            <div class="stat-card stat-card-orange" style="cursor: pointer;">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ active_loans_count|default:0 }}</h3>
+                        <p class="mb-0">Active Loans</p>
+                        <small class="text-muted">KES {{ total_loans_amount|floatformat:0|default:0 }}</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-hand-holding-usd fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3">
         <div class="stat-card">
             <div class="d-flex justify-content-between">
                 <div>
-                    <h3>0</h3>
+                    <h3>{{ total_members|default:0 }}</h3>
                     <p class="mb-0">Total Members</p>
                 </div>
                 <div class="align-self-center">
@@ -93,15 +127,21 @@
                     {% for group in savings_groups %}
                     <tr>
                         <td>
-                            <strong>{{ group.group_name }}</strong><br>
-                            <small class="text-muted">{{ group.business_group.name|default:"Independent BSG" }}</small>
+                            <strong>{{ group.name }}</strong><br>
+                            <small class="text-muted">
+                                {% if group.business_groups.exists %}
+                                    {% for bg in group.business_groups.all %}{{ bg.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                {% else %}
+                                    Independent BSG
+                                {% endif %}
+                            </small>
                         </td>
                         <td>{{ group.formation_date|date:"M d, Y" }}</td>
-                        <td>{{ group.member_count|default:0 }}</td>
+                        <td>{{ group.bsg_members.count }}</td>
                         <td>
-                            <strong class="text-success">KES {{ group.total_savings|floatformat:0|default:0 }}</strong>
+                            <strong class="text-success">KES {{ group.savings_to_date|floatformat:0|default:0 }}</strong>
                         </td>
-                        <td>{{ group.meeting_frequency|default:"Not specified" }}</td>
+                        <td>{{ group.get_savings_frequency_display|default:"Not specified" }}</td>
                         <td>
                             <span class="badge bg-{% if group.is_active %}success{% else %}secondary{% endif %}">
                                 {% if group.is_active %}Active{% else %}Inactive{% endif %}

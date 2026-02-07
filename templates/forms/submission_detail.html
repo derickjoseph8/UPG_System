@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+
+{% block title %}Submission Details - UPG MIS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .submission-card {
+        border: none;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+    .submission-header {
+        background: linear-gradient(135deg, #2c5aa0 0%, #1a3d6e 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px 8px 0 0;
+    }
+    .submission-header h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+    .submission-header .badge {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.65rem;
+    }
+    .data-row {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.15s ease;
+    }
+    .data-row:hover {
+        background-color: #f8f9fa;
+    }
+    .data-row:last-child {
+        border-bottom: none;
+    }
+    .data-label {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+    .data-value {
+        color: #212529;
+        font-size: 1rem;
+        word-break: break-word;
+    }
+    .data-value.text-muted {
+        font-style: italic;
+    }
+    .info-sidebar .info-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .info-sidebar .info-item:last-child {
+        border-bottom: none;
+    }
+    .info-sidebar .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+    .info-sidebar .info-value {
+        font-weight: 500;
+        color: #212529;
+    }
+    .field-type-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+        background: #e9ecef;
+        color: #6c757d;
+        border-radius: 3px;
+        margin-left: 0.5rem;
+    }
+    .gps-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #dc3545;
+        text-decoration: none;
+    }
+    .gps-link:hover {
+        text-decoration: underline;
+    }
+    .empty-value {
+        color: #adb5bd;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="{% url 'forms:template_list' %}">Forms</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'forms:form_submissions' submission.form_template.id %}">{{ submission.form_template.name }}</a></li>
+                            <li class="breadcrumb-item active">Submission #{{ submission.id }}</li>
+                        </ol>
+                    </nav>
+                    <h2 class="mb-0"><i class="fas fa-file-alt text-primary"></i> Submission #{{ submission.id }}</h2>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'forms:form_submissions' submission.form_template.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Submissions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Data Card -->
+        <div class="col-lg-8 mb-4">
+            <div class="card submission-card">
+                <div class="submission-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h4>{{ submission.form_template.name }}</h4>
+                            <div class="mt-2">
+                                <span class="badge bg-{% if submission.data_source == 'kobo_sync' or submission.data_source == 'kobo_webhook' %}success{% else %}info{% endif %}">
+                                    <i class="fas fa-{% if submission.data_source == 'kobo_sync' or submission.data_source == 'kobo_webhook' %}mobile-alt{% else %}globe{% endif %} me-1"></i>
+                                    {{ submission.get_data_source_display }}
+                                </span>
+                                <span class="badge bg-{% if submission.status == 'submitted' %}primary{% elif submission.status == 'approved' %}success{% elif submission.status == 'pending' %}warning{% else %}secondary{% endif %} ms-1">
+                                    {{ submission.status|title }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <small class="d-block opacity-75">Submitted</small>
+                            <span>{{ submission.submitted_at|date:"M d, Y" }}</span>
+                            <small class="d-block opacity-75">{{ submission.submitted_at|time:"H:i" }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    {% if filtered_data %}
+                        {% for item in filtered_data %}
+                        <div class="data-row">
+                            <div class="data-label">
+                                {{ item.label }}
+                                {% if item.type != 'text' %}
+                                <span class="field-type-badge">{{ item.type }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="data-value">
+                                {% if item.type == 'geopoint' and item.value %}
+                                    {% with coords=item.value|default:"" %}
+                                    <a href="https://maps.google.com/?q={{ coords }}" target="_blank" class="gps-link">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        {{ coords }}
+                                    </a>
+                                    {% endwith %}
+                                {% elif item.type == 'image' or item.type == 'photo' %}
+                                    {% if item.value %}
+                                    <a href="{{ item.value }}" target="_blank" class="text-primary">
+                                        <i class="fas fa-image me-1"></i> View Image
+                                    </a>
+                                    {% else %}
+                                    <span class="empty-value">No image</span>
+                                    {% endif %}
+                                {% elif item.type == 'signature' %}
+                                    {% if item.value %}
+                                    <a href="{{ item.value }}" target="_blank" class="text-primary">
+                                        <i class="fas fa-signature me-1"></i> View Signature
+                                    </a>
+                                    {% else %}
+                                    <span class="empty-value">No signature</span>
+                                    {% endif %}
+                                {% elif item.value %}
+                                    {{ item.value }}
+                                {% else %}
+                                    <span class="empty-value">Not answered</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No form data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-lg-4 mb-4">
+            <!-- Submission Info Card -->
+            <div class="card submission-card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-info-circle text-muted me-2"></i>Submission Info</h6>
+                </div>
+                <div class="card-body info-sidebar">
+                    <div class="info-item">
+                        <div class="info-label">Submitted By</div>
+                        <div class="info-value">
+                            <i class="fas fa-user text-muted me-2"></i>
+                            {{ submission.submitted_by.get_full_name|default:submission.submitted_by.username }}
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Submission Date</div>
+                        <div class="info-value">
+                            <i class="fas fa-calendar text-muted me-2"></i>
+                            {{ submission.submitted_at|date:"F d, Y" }}
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Submission Time</div>
+                        <div class="info-value">
+                            <i class="fas fa-clock text-muted me-2"></i>
+                            {{ submission.submitted_at|time:"H:i:s" }}
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Data Source</div>
+                        <div class="info-value">
+                            {% if submission.data_source == 'kobo_sync' %}
+                            <span class="badge bg-success"><i class="fas fa-sync me-1"></i> Kobo Sync</span>
+                            {% elif submission.data_source == 'kobo_webhook' %}
+                            <span class="badge bg-success"><i class="fas fa-bolt me-1"></i> Kobo Webhook</span>
+                            {% else %}
+                            <span class="badge bg-info"><i class="fas fa-globe me-1"></i> Web Form</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value">
+                            <span class="badge bg-{% if submission.status == 'submitted' %}primary{% elif submission.status == 'approved' %}success{% elif submission.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                {{ submission.status|title }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIS Validation Card -->
+            {% if submission.validation_status and submission.validation_status != 'not_validated' %}
+            <div class="card submission-card mb-4">
+                <div class="card-header bg-{% if submission.validation_status == 'beneficiary_found' or submission.validation_status == 'data_updated' %}success{% elif submission.validation_status == 'duplicate_detected' %}warning{% elif submission.validation_status == 'beneficiary_not_found' %}danger{% else %}light{% endif %} {% if submission.validation_status != 'not_validated' %}text-white{% endif %}">
+                    <h6 class="mb-0">
+                        {% if submission.validation_status == 'beneficiary_found' %}
+                        <i class="fas fa-check-circle me-2"></i>Beneficiary Verified
+                        {% elif submission.validation_status == 'duplicate_detected' %}
+                        <i class="fas fa-exclamation-triangle me-2"></i>Duplicate Detected
+                        {% elif submission.validation_status == 'beneficiary_not_found' %}
+                        <i class="fas fa-times-circle me-2"></i>Not Found in MIS
+                        {% elif submission.validation_status == 'data_updated' %}
+                        <i class="fas fa-sync-alt me-2"></i>Data Updated
+                        {% else %}
+                        <i class="fas fa-question-circle me-2"></i>Validation Status
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">{{ submission.validation_message }}</p>
+                    {% if submission.matched_household %}
+                    <hr>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Matched Household</small>
+                        <strong>{{ submission.matched_household.head_full_name|default:submission.matched_household.name }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Household ID</small>
+                        <code>#{{ submission.matched_household.id }}</code>
+                    </div>
+                    {% if submission.matched_household.village %}
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Village</small>
+                        {{ submission.matched_household.village.name }}
+                    </div>
+                    {% endif %}
+                    {% if submission.matched_household.head_phone_number or submission.matched_household.phone_number %}
+                    <div class="mb-0">
+                        <small class="text-muted d-block">Phone</small>
+                        {{ submission.matched_household.head_phone_number|default:submission.matched_household.phone_number }}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Location Card -->
+            {% if submission.gps_latitude and submission.gps_longitude %}
+            <div class="card submission-card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-map-marker-alt text-danger me-2"></i>Location</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Coordinates</small>
+                        <span>{{ submission.gps_latitude|floatformat:6 }}, {{ submission.gps_longitude|floatformat:6 }}</span>
+                    </div>
+                    {% if submission.gps_accuracy %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Accuracy</small>
+                        <span>{{ submission.gps_accuracy|floatformat:1 }} meters</span>
+                    </div>
+                    {% endif %}
+                    <a href="https://maps.google.com/?q={{ submission.gps_latitude }},{{ submission.gps_longitude }}"
+                       target="_blank"
+                       class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-external-link-alt me-1"></i> View on Map
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Related Info Card -->
+            {% if submission.household or submission.business_group or submission.assignment %}
+            <div class="card submission-card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-link text-muted me-2"></i>Related Records</h6>
+                </div>
+                <div class="card-body info-sidebar">
+                    {% if submission.household %}
+                    <div class="info-item">
+                        <div class="info-label">Household</div>
+                        <div class="info-value">
+                            <i class="fas fa-home text-muted me-2"></i>
+                            {{ submission.household.name }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if submission.business_group %}
+                    <div class="info-item">
+                        <div class="info-label">Business Group</div>
+                        <div class="info-value">
+                            <i class="fas fa-users text-muted me-2"></i>
+                            {{ submission.business_group.name }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if submission.assignment %}
+                    <div class="info-item">
+                        <div class="info-label">Assignment</div>
+                        <div class="info-value">
+                            <i class="fas fa-tasks text-muted me-2"></i>
+                            {{ submission.assignment }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Kobo Info Card (for Kobo submissions) -->
+            {% if submission.kobo_submission_uuid %}
+            <div class="card submission-card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-cloud text-success me-2"></i>KoboToolbox</h6>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted d-block mb-1">Submission UUID</small>
+                    <code class="small text-break">{{ submission.kobo_submission_uuid }}</code>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

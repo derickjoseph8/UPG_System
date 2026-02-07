@@ -77,6 +77,9 @@
                     <a href="{% url 'settings:user_create' %}" class="btn btn-success btn-sm">
                         <i class="fas fa-plus"></i> Add User
                     </a>
+                    <a href="{% url 'settings:custom_role_list' %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-user-shield"></i> Custom Roles
+                    </a>
                 </div>
             </div>
         </div>
@@ -152,6 +155,68 @@
                     </a>
                     <a href="{% url 'settings:create_alert' %}" class="btn btn-warning btn-sm">
                         <i class="fas fa-plus"></i> Create Alert
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Backup & Restore -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-database"></i> Backup & Restore</h5>
+                <span class="badge bg-light text-primary">{{ backup_count|default:0 }} backups</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Manage system backups, restore points, and automated backup schedules</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-save text-primary me-2"></i>Database Backups</li>
+                    <li><i class="fas fa-archive text-success me-2"></i>Full System Backups</li>
+                    <li><i class="fas fa-clock text-info me-2"></i>Automated Scheduling</li>
+                    <li><i class="fas fa-undo text-warning me-2"></i>Restore Points</li>
+                </ul>
+                {% if last_backup %}
+                <div class="alert alert-success py-2 mb-3">
+                    <small><i class="fas fa-check-circle me-1"></i>Last backup: {{ last_backup.completed_at|date:"M d, Y H:i" }} ({{ last_backup.backup_type }})</small>
+                </div>
+                {% else %}
+                <div class="alert alert-warning py-2 mb-3">
+                    <small><i class="fas fa-exclamation-triangle me-1"></i>No backups found. Create your first backup now.</small>
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    <a href="{% url 'settings:backup_dashboard' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-database"></i> Backup Dashboard
+                    </a>
+                    <a href="{% url 'settings:create_full_backup' %}" class="btn btn-success btn-sm" onclick="return confirm('Create a full system backup? This may take a few moments.');">
+                        <i class="fas fa-plus"></i> Create Backup
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KoboToolbox Integration -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-cloud"></i> KoboToolbox Integration</h5>
+                <span class="badge bg-info">Data Collection</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Configure KoboToolbox API settings for data collection and synchronization</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-link text-primary me-2"></i>API Connection</li>
+                    <li><i class="fas fa-sync text-success me-2"></i>Data Synchronization</li>
+                    <li><i class="fas fa-file-alt text-info me-2"></i>Form Management</li>
+                    <li><i class="fas fa-history text-warning me-2"></i>Sync History</li>
+                </ul>
+                <div class="d-flex gap-2 mt-3">
+                    <a href="{% url 'settings:kobo_settings' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-cog"></i> Kobo Settings
                     </a>
                 </div>
             </div>
@@ -235,33 +300,33 @@
     </div>
     <div class="card-body">
         <div class="row">
-            <div class="col-md-2 mb-3">
-                <a href="{% url 'settings:user_create' %}" class="btn btn-outline-success w-100">
+            <div class="col-lg-2 col-md-3 col-4 mb-3">
+                <a href="{% url 'settings:user_create' %}" class="btn btn-outline-success w-100 h-100 py-3">
                     <i class="fas fa-user-plus"></i><br>Add User
                 </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="{% url 'settings:system_config' %}" class="btn btn-outline-primary w-100">
+            <div class="col-lg-2 col-md-3 col-4 mb-3">
+                <a href="{% url 'settings:system_config' %}" class="btn btn-outline-primary w-100 h-100 py-3">
                     <i class="fas fa-cog"></i><br>System Config
                 </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="{% url 'settings:audit_logs' %}" class="btn btn-outline-info w-100">
+            <div class="col-lg-2 col-md-3 col-4 mb-3">
+                <a href="{% url 'settings:backup_dashboard' %}" class="btn btn-outline-primary w-100 h-100 py-3">
+                    <i class="fas fa-database"></i><br>Backups
+                </a>
+            </div>
+            <div class="col-lg-2 col-md-3 col-4 mb-3">
+                <a href="{% url 'settings:audit_logs' %}" class="btn btn-outline-info w-100 h-100 py-3">
                     <i class="fas fa-clipboard-list"></i><br>Audit Logs
                 </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="{% url 'settings:create_alert' %}" class="btn btn-outline-warning w-100">
+            <div class="col-lg-2 col-md-3 col-4 mb-3">
+                <a href="{% url 'settings:create_alert' %}" class="btn btn-outline-warning w-100 h-100 py-3">
                     <i class="fas fa-bell"></i><br>Create Alert
                 </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="{% url 'settings:user_settings' %}" class="btn btn-outline-secondary w-100">
-                    <i class="fas fa-user-cog"></i><br>My Settings
-                </a>
-            </div>
-            <div class="col-md-2 mb-3">
-                <button class="btn btn-outline-danger w-100" onclick="showMaintenanceModal()">
+            <div class="col-lg-2 col-md-3 col-4 mb-3">
+                <button class="btn btn-outline-danger w-100 h-100 py-3" onclick="showMaintenanceModal()">
                     <i class="fas fa-tools"></i><br>Maintenance
                 </button>
             </div>
@@ -283,15 +348,23 @@
                     <strong>Warning:</strong> System maintenance operations should be performed during off-peak hours.
                 </div>
                 <div class="list-group">
-                    <button class="list-group-item list-group-item-action" onclick="alert('Backup functionality - to be implemented')">
+                    <button class="list-group-item list-group-item-action" onclick="performBackup()" id="backupBtn">
                         <i class="fas fa-database text-primary me-2"></i>Create System Backup
                     </button>
-                    <button class="list-group-item list-group-item-action" onclick="alert('Cache clear functionality - to be implemented')">
+                    <button class="list-group-item list-group-item-action" onclick="clearCache()" id="cacheBtn">
                         <i class="fas fa-trash text-warning me-2"></i>Clear System Cache
                     </button>
-                    <button class="list-group-item list-group-item-action" onclick="alert('Log cleanup functionality - to be implemented')">
-                        <i class="fas fa-broom text-info me-2"></i>Clean Log Files
+                    <button class="list-group-item list-group-item-action" onclick="cleanupLogs()" id="cleanupBtn">
+                        <i class="fas fa-broom text-info me-2"></i>Clean Log Files (90 days)
                     </button>
+                </div>
+
+                <!-- Progress indicator -->
+                <div id="maintenanceProgress" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span id="progressText">Processing...</span>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -304,6 +377,140 @@
 <script>
 function showMaintenanceModal() {
     new bootstrap.Modal(document.getElementById('maintenanceModal')).show();
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showProgress(text) {
+    document.getElementById('progressText').textContent = text;
+    document.getElementById('maintenanceProgress').style.display = 'block';
+    // Disable buttons
+    document.getElementById('backupBtn').disabled = true;
+    document.getElementById('cacheBtn').disabled = true;
+    document.getElementById('cleanupBtn').disabled = true;
+}
+
+function hideProgress() {
+    document.getElementById('maintenanceProgress').style.display = 'none';
+    // Enable buttons
+    document.getElementById('backupBtn').disabled = false;
+    document.getElementById('cacheBtn').disabled = false;
+    document.getElementById('cleanupBtn').disabled = false;
+}
+
+function performBackup() {
+    if (!confirm('Create a database backup? This may take a few moments.')) {
+        return;
+    }
+
+    showProgress('Creating backup...');
+
+    fetch('{% url "settings:create_backup" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProgress();
+        if (data.success) {
+            alert('Success!\n\n' + data.message +
+                  (data.backup_size ? '\nSize: ' + data.backup_size : ''));
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        alert('Error creating backup: ' + error);
+    });
+}
+
+function clearCache() {
+    if (!confirm('Clear all system cache? This will temporarily slow down the system.')) {
+        return;
+    }
+
+    showProgress('Clearing cache...');
+
+    fetch('{% url "settings:clear_cache" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProgress();
+        if (data.success) {
+            alert('Success!\n\n' + data.message);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        alert('Error clearing cache: ' + error);
+    });
+}
+
+function cleanupLogs() {
+    const days = prompt('Delete audit logs older than how many days?', '90');
+
+    if (days === null) {
+        return;
+    }
+
+    if (isNaN(days) || days < 1) {
+        alert('Please enter a valid number of days (minimum 1)');
+        return;
+    }
+
+    if (!confirm(`Delete all audit logs older than ${days} days? This cannot be undone.`)) {
+        return;
+    }
+
+    showProgress('Cleaning up logs...');
+
+    fetch('{% url "settings:cleanup_logs" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'days=' + days
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProgress();
+        if (data.success) {
+            alert('Success!\n\n' + data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        alert('Error cleaning up logs: ' + error);
+    });
 }
 </script>
 

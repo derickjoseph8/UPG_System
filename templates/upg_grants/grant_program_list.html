@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-hand-holding-usd"></i> {{ page_title }}</h2>
+                    <p class="text-muted">Manage grant programs and assignments</p>
+                </div>
+                <div>
+                    {% if can_create %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGrantProgramModal">
+                        <i class="fas fa-plus"></i> Create Grant Program
+                    </button>
+                    {% endif %}
+                    {% if user_role == 'field_associate' %}
+                    <a href="{% url 'upg_grants:grant_fa_assignments_list' %}" class="btn btn-outline-primary ms-2">
+                        <i class="fas fa-clipboard-list"></i> My Assignments
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grant Programs Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Grant Programs</h5>
+                </div>
+                <div class="card-body">
+                    {% if grant_programs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Grant Type</th>
+                                    <th>Program</th>
+                                    <th>Budget</th>
+                                    <th>Status</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for gp in grant_programs %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ gp.name }}</strong>
+                                        {% if gp.description %}
+                                        <br><small class="text-muted">{{ gp.description|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ gp.get_grant_type_display }}</td>
+                                    <td>{{ gp.program.name|default:"-" }}</td>
+                                    <td>KES {{ gp.total_budget|floatformat:0 }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if gp.status == 'active' %}success{% elif gp.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                            {{ gp.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ gp.created_by.get_full_name }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'upg_grants:grant_program_detail' gp.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if gp.status == 'active' and user_role in 'mentor,field_associate' %}
+                                            <a href="{% url 'upg_grants:application_create_universal' %}?grant_program={{ gp.id }}" class="btn btn-sm btn-success" title="Apply for this Grant">
+                                                <i class="fas fa-plus-circle"></i> Apply
+                                            </a>
+                                            {% endif %}
+                                            {% if user_role == 'field_associate' %}
+                                            <a href="{% url 'upg_grants:grant_assign_mentors' gp.id %}" class="btn btn-sm btn-outline-warning" title="Assign Mentors">
+                                                <i class="fas fa-user-plus"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-hand-holding-usd fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No grant programs found</p>
+                        {% if can_create %}
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGrantProgramModal">
+                            <i class="fas fa-plus"></i> Create Your First Grant Program
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Grant Program Modal -->
+{% if can_create %}
+<div class="modal fade" id="createGrantProgramModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Create Grant Program</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'upg_grants:grant_program_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Program Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required placeholder="e.g., Seed Business Grant Q1 2026">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Grant Type <span class="text-danger">*</span></label>
+                            <select class="form-select" name="grant_type" required>
+                                {% for value, label in grant_type_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3" placeholder="Describe the grant program and eligibility criteria"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Associated Program</label>
+                            <select class="form-select" name="program">
+                                <option value="">-- Select Program --</option>
+                                {% for p in programs %}
+                                <option value="{{ p.id }}">{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="draft">Draft</option>
+                                <option value="active">Active</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Total Budget (KES)</label>
+                            <input type="number" class="form-control" name="total_budget" value="0" min="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Min Amount per Beneficiary</label>
+                            <input type="number" class="form-control" name="min_amount_per_beneficiary" value="5000" min="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Amount per Beneficiary</label>
+                            <input type="number" class="form-control" name="max_amount_per_beneficiary" value="15000" min="0">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Application Start Date</label>
+                            <input type="date" class="form-control" name="application_start_date">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Application End Date</label>
+                            <input type="date" class="form-control" name="application_end_date">
+                        </div>
+                    </div>
+
+                    <!-- Field Associate Assignment Section -->
+                    {% if field_associates %}
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Assign Field Associates</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Select Field Associates to manage this grant program. They will be able to assign mentors and process applications.</p>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="select_all_fas">
+                                <label class="form-check-label fw-bold" for="select_all_fas">
+                                    Select All Field Associates ({{ field_associates|length }})
+                                </label>
+                            </div>
+
+                            <div id="fa-checkboxes" class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                {% for fa in field_associates %}
+                                <div class="form-check">
+                                    <input class="form-check-input fa-checkbox" type="checkbox"
+                                           name="field_associates[]" value="{{ fa.id }}" id="fa-{{ fa.id }}">
+                                    <label class="form-check-label" for="fa-{{ fa.id }}">
+                                        {{ fa.get_full_name }}
+                                        {% if fa.email %}<small class="text-muted">({{ fa.email }})</small>{% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Grant Program
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllFAs = document.getElementById('select_all_fas');
+    if (selectAllFAs) {
+        selectAllFAs.addEventListener('change', function() {
+            document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+                cb.checked = selectAllFAs.checked;
+            });
+        });
+
+        document.querySelectorAll('.fa-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const totalFAs = document.querySelectorAll('.fa-checkbox').length;
+                const checkedFAs = document.querySelectorAll('.fa-checkbox:checked').length;
+                selectAllFAs.checked = (totalFAs === checkedFAs);
+                selectAllFAs.indeterminate = (checkedFAs > 0 && checkedFAs < totalFAs);
+            });
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

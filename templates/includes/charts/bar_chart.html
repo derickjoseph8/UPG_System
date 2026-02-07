@@ -1,0 +1,52 @@
+{# Reusable Bar Chart Component #}
+{# Usage: {% include 'includes/charts/bar_chart.html' with chart_id='myChart' labels=labels values=values dataset_label='Label' %} #}
+
+<canvas id="{{ chart_id }}" height="{{ height|default:300 }}"></canvas>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const ctx = document.getElementById('{{ chart_id }}');
+        if (!ctx) {
+            console.error('Canvas element not found: {{ chart_id }}');
+            return;
+        }
+        const chartLabels = {{ labels|safe|default:"[]" }};
+        const chartValues = {{ values|safe|default:"[]" }};
+
+        if (chartLabels.length === 0) {
+            ctx.parentElement.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-chart-bar fa-2x mb-2"></i><p>No data available</p></div>';
+            return;
+        }
+
+        new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: '{{ dataset_label|default:"Data" }}',
+                    data: chartValues,
+                    backgroundColor: {{ bg_colors|safe|default:'["rgba(54, 162, 235, 0.8)", "rgba(75, 192, 192, 0.8)", "rgba(255, 206, 86, 0.8)", "rgba(153, 102, 255, 0.8)", "rgba(255, 159, 64, 0.8)", "rgba(255, 99, 132, 0.8)"]' }},
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: '{{ index_axis|default:"x" }}',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Chart error ({{ chart_id }}):', e);
+    }
+});
+</script>

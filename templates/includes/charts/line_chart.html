@@ -1,0 +1,58 @@
+{# Reusable Line Chart Component #}
+{# Usage: {% include 'includes/charts/line_chart.html' with chart_id='trendChart' labels=labels values=values dataset_label='Trend' %} #}
+
+<canvas id="{{ chart_id }}" height="{{ height|default:300 }}"></canvas>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const ctx = document.getElementById('{{ chart_id }}');
+        if (!ctx) {
+            console.error('Canvas element not found: {{ chart_id }}');
+            return;
+        }
+        const chartLabels = {{ labels|safe|default:"[]" }};
+        const chartValues = {{ values|safe|default:"[]" }};
+
+        if (chartLabels.length === 0) {
+            ctx.parentElement.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-chart-line fa-2x mb-2"></i><p>No data available</p></div>';
+            return;
+        }
+
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: '{{ dataset_label|default:"Trend" }}',
+                    data: chartValues,
+                    fill: true,
+                    backgroundColor: '{{ bg_color|default:"rgba(54, 162, 235, 0.2)" }}',
+                    borderColor: '{{ border_color|default:"rgba(54, 162, 235, 1)" }}',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointBackgroundColor: '{{ point_color|default:"rgba(54, 162, 235, 1)" }}',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Chart error ({{ chart_id }}):', e);
+    }
+});
+</script>

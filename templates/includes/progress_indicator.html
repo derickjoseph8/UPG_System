@@ -1,0 +1,32 @@
+{# Progress Indicator Component #}
+{# Usage: {% include 'includes/progress_indicator.html' with label='Completion' current=75 target=100 %} #}
+
+<div class="mb-3">
+    <div class="d-flex justify-content-between mb-1">
+        <span class="fw-medium">{{ label }}</span>
+        {% if target and target > 0 %}
+        {% widthratio current target 100 as percentage %}
+        <span class="{% if percentage >= 80 %}text-success{% elif percentage >= 50 %}text-warning{% else %}text-danger{% endif %}">
+            {{ current|default:0 }} / {{ target }} ({{ percentage }}%)
+        </span>
+        {% else %}
+        <span class="text-muted">{{ current|default:0 }}</span>
+        {% endif %}
+    </div>
+    <div class="progress" style="height: {{ height|default:8 }}px;">
+        {% if target and target > 0 %}
+        {% widthratio current target 100 as percentage %}
+        <div class="progress-bar
+            {% if percentage >= 80 %}bg-success{% elif percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+            role="progressbar"
+            style="width: {{ percentage }}%"
+            aria-valuenow="{{ percentage }}"
+            aria-valuemin="0"
+            aria-valuemax="100">
+        </div>
+        {% endif %}
+    </div>
+    {% if description %}
+    <small class="text-muted">{{ description }}</small>
+    {% endif %}
+</div>

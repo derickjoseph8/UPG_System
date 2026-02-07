@@ -27,9 +27,10 @@
                             <select class="form-select" id="household" name="household" required>
                                 <option value="">-- Select Household --</option>
                                 {% for household in households %}
-                                <option value="{{ household.id }}">{{ household.name }}</option>
+                                <option value="{{ household.id }}">{{ household }}</option>
                                 {% endfor %}
                             </select>
+                            <small class="form-text text-muted">{{ households.count }} households available</small>
                         </div>
 
                         <div class="mb-3">

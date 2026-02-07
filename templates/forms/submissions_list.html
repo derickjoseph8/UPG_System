@@ -1,0 +1,587 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .chart-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .chart-card .card-header {
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .chart-container {
+        position: relative;
+        height: 220px;
+    }
+    .submissions-table th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-top: none;
+    }
+    .submissions-table td {
+        vertical-align: middle;
+    }
+    .source-badge {
+        font-size: 0.75rem;
+    }
+    .nav-tabs-kobo {
+        border-bottom: 2px solid #e9ecef;
+    }
+    .nav-tabs-kobo .nav-link {
+        border: none;
+        color: #6c757d;
+        padding: 0.75rem 1.25rem;
+        font-weight: 500;
+    }
+    .nav-tabs-kobo .nav-link.active {
+        color: #2c5aa0;
+        border-bottom: 2px solid #2c5aa0;
+        margin-bottom: -2px;
+    }
+    .nav-tabs-kobo .nav-link:hover:not(.active) {
+        color: #212529;
+        background: #f8f9fa;
+    }
+    .toggle-charts-btn {
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="{% url 'forms:template_list' %}">Forms</a></li>
+                            <li class="breadcrumb-item active">{{ form_template.name }}</li>
+                        </ol>
+                    </nav>
+                    <h2 class="mb-0"><i class="fas fa-list-alt text-primary"></i> {{ page_title }}</h2>
+                    <p class="text-muted mb-0">{{ total_count }} total submission{{ total_count|pluralize }}</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'forms:template_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Forms
+                    </a>
+                    {% if form_template.kobo_asset_uid %}
+                    <button type="button" class="btn btn-success" id="fetchKoboBtn" onclick="fetchFromKobo()">
+                        <i class="fas fa-cloud-download-alt"></i> Fetch from Kobo
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="card stat-card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Submissions</h6>
+                            <h2 class="mb-0 fw-bold">{{ total_count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-file-alt fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="card stat-card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Web Submissions</h6>
+                            <h2 class="mb-0 fw-bold">{{ web_count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-globe fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Kobo Submissions</h6>
+                            <h2 class="mb-0 fw-bold">{{ kobo_count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-mobile-alt fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    {% if chart_fields or timeline_data.values %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="fas fa-chart-bar text-muted me-2"></i>Response Analytics</h5>
+                <button class="btn btn-outline-secondary btn-sm toggle-charts-btn" type="button" data-bs-toggle="collapse" data-bs-target="#chartsSection">
+                    <i class="fas fa-chevron-down"></i> Toggle Charts
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapse show" id="chartsSection">
+        <div class="row mb-4">
+            <!-- Timeline Chart -->
+            {% if timeline_data.values %}
+            <div class="col-lg-6 mb-4">
+                <div class="card chart-card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line text-primary me-2"></i>Submissions Over Time
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Source Distribution Pie Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card chart-card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie text-success me-2"></i>Submission Sources
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="sourceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Field Response Charts -->
+            {% for chart in chart_fields %}
+            <div class="col-lg-6 mb-4">
+                <div class="card chart-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-chart-bar text-info me-2"></i>{{ chart.field_label }}
+                        </span>
+                        <span class="badge bg-secondary">{{ chart.total_responses }} responses</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="chart_{{ forloop.counter }}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter Tabs -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <ul class="nav nav-tabs-kobo">
+                <li class="nav-item">
+                    <a class="nav-link {% if not source_filter %}active{% endif %}" href="?source=">
+                        <i class="fas fa-list me-1"></i> All
+                        <span class="badge bg-secondary ms-1">{{ total_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if source_filter == 'web_form' %}active{% endif %}" href="?source=web_form">
+                        <i class="fas fa-globe me-1"></i> Web
+                        <span class="badge bg-info ms-1">{{ web_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if source_filter == 'kobo_sync' %}active{% endif %}" href="?source=kobo_sync">
+                        <i class="fas fa-sync me-1"></i> Kobo Sync
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if source_filter == 'kobo_webhook' %}active{% endif %}" href="?source=kobo_webhook">
+                        <i class="fas fa-bolt me-1"></i> Kobo Webhook
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Submissions Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if submissions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover submissions-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Submitted By</th>
+                                    <th>Date</th>
+                                    <th>Source</th>
+                                    <th>Status</th>
+                                    <th>Location</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for submission in submissions %}
+                                <tr>
+                                    <td><strong>#{{ submission.id }}</strong></td>
+                                    <td>
+                                        <i class="fas fa-user text-muted me-1"></i>
+                                        {{ submission.submitted_by.get_full_name|default:submission.submitted_by.username }}
+                                    </td>
+                                    <td>
+                                        <span title="{{ submission.submission_date|date:'F d, Y H:i:s' }}">
+                                            {{ submission.submission_date|date:"M d, Y" }}
+                                            <small class="text-muted d-block">{{ submission.submission_date|time:"H:i" }}</small>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if submission.data_source == 'web_form' %}
+                                        <span class="badge bg-info source-badge"><i class="fas fa-globe me-1"></i>Web</span>
+                                        {% elif submission.data_source == 'kobo_sync' %}
+                                        <span class="badge bg-success source-badge"><i class="fas fa-sync me-1"></i>Kobo Sync</span>
+                                        {% elif submission.data_source == 'kobo_webhook' %}
+                                        <span class="badge bg-success source-badge"><i class="fas fa-bolt me-1"></i>Webhook</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary source-badge">{{ submission.data_source }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if submission.status == 'submitted' %}primary{% elif submission.status == 'approved' %}success{% elif submission.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                                            {{ submission.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if submission.gps_latitude and submission.gps_longitude %}
+                                        <a href="https://maps.google.com/?q={{ submission.gps_latitude }},{{ submission.gps_longitude }}" target="_blank" class="text-decoration-none text-danger">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <small>{{ submission.gps_latitude|floatformat:4 }}, {{ submission.gps_longitude|floatformat:4 }}</small>
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'forms:submission_detail' submission.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav aria-label="Submissions pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if source_filter %}&source={{ source_filter }}{% endif %}">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if source_filter %}&source={{ source_filter }}{% endif %}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if source_filter %}&source={{ source_filter }}{% endif %}">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No submissions yet</h5>
+                        <p class="text-muted">Submissions will appear here once data is collected.</p>
+                        {% if form_template.kobo_asset_uid %}
+                        <button type="button" class="btn btn-success mt-2" onclick="fetchFromKobo()">
+                            <i class="fas fa-cloud-download-alt"></i> Fetch from KoboToolbox
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fetch Status Modal -->
+<div class="modal fade" id="fetchStatusModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">
+                    <i class="fas fa-cloud-download-alt text-success me-2"></i>Fetching Submissions
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="fetchLoading">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted">Fetching submissions from KoboToolbox...</p>
+                </div>
+                <div id="fetchResult" style="display: none;">
+                    <i class="fas fa-check-circle text-success fa-4x mb-3" id="fetchSuccess" style="display: none;"></i>
+                    <i class="fas fa-times-circle text-danger fa-4x mb-3" id="fetchError" style="display: none;"></i>
+                    <p id="fetchMessage" class="mb-0"></p>
+                </div>
+            </div>
+            <div class="modal-footer border-0" id="fetchModalFooter" style="display: none;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh Page
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+// CSRF Token helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fetch submissions from Kobo
+function fetchFromKobo() {
+    const modal = new bootstrap.Modal(document.getElementById('fetchStatusModal'));
+    modal.show();
+
+    document.getElementById('fetchLoading').style.display = 'block';
+    document.getElementById('fetchResult').style.display = 'none';
+    document.getElementById('fetchModalFooter').style.display = 'none';
+
+    fetch('{% url "forms:fetch_submissions" form_template.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('fetchLoading').style.display = 'none';
+        document.getElementById('fetchResult').style.display = 'block';
+        document.getElementById('fetchModalFooter').style.display = 'flex';
+
+        if (data.success) {
+            document.getElementById('fetchSuccess').style.display = 'block';
+            document.getElementById('fetchError').style.display = 'none';
+        } else {
+            document.getElementById('fetchSuccess').style.display = 'none';
+            document.getElementById('fetchError').style.display = 'block';
+        }
+
+        document.getElementById('fetchMessage').textContent = data.message;
+    })
+    .catch(error => {
+        document.getElementById('fetchLoading').style.display = 'none';
+        document.getElementById('fetchResult').style.display = 'block';
+        document.getElementById('fetchModalFooter').style.display = 'flex';
+        document.getElementById('fetchSuccess').style.display = 'none';
+        document.getElementById('fetchError').style.display = 'block';
+        document.getElementById('fetchMessage').textContent = 'Error: ' + error.message;
+    });
+}
+
+// Chart colors palette (Kobo-like)
+const chartColors = [
+    '#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0',
+    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#3F51B5'
+];
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Source Distribution Pie Chart
+    {% if total_count > 0 %}
+    const sourceCtx = document.getElementById('sourceChart');
+    if (sourceCtx) {
+        new Chart(sourceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Web Form', 'Kobo'],
+                datasets: [{
+                    data: [{{ web_count }}, {{ kobo_count }}],
+                    backgroundColor: ['#17a2b8', '#28a745'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+    {% endif %}
+
+    // Timeline Chart
+    {% if timeline_data.values %}
+    const timelineCtx = document.getElementById('timelineChart');
+    if (timelineCtx) {
+        new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: {{ timeline_data.labels|safe }},
+                datasets: [{
+                    label: 'Submissions',
+                    data: {{ timeline_data.values|safe }},
+                    borderColor: '#2c5aa0',
+                    backgroundColor: 'rgba(44, 90, 160, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2c5aa0'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // Field Response Charts
+    {% for chart in chart_fields %}
+    const ctx{{ forloop.counter }} = document.getElementById('chart_{{ forloop.counter }}');
+    if (ctx{{ forloop.counter }}) {
+        new Chart(ctx{{ forloop.counter }}, {
+            type: 'bar',
+            data: {
+                labels: {{ chart.labels|safe }},
+                datasets: [{
+                    label: 'Responses',
+                    data: {{ chart.values|safe }},
+                    backgroundColor: chartColors.slice(0, {{ chart.values|length }}),
+                    borderRadius: 4,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            callback: function(value, index, values) {
+                                const label = this.getLabelForValue(value);
+                                return label.length > 25 ? label.substr(0, 25) + '...' : label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endfor %}
+});
+</script>
+{% endblock %}

@@ -16,8 +16,8 @@
         <div class="stat-card stat-card-blue">
             <div class="d-flex justify-content-between">
                 <div>
-                    <h3>{{ stats.managed_mentors }}</h3>
-                    <p class="mb-0">Managed Mentors</p>
+                    <h3>{{ stats.managed_mentors|default:0 }}</h3>
+                    <p class="mb-0">Supervised Mentors</p>
                 </div>
                 <div class="align-self-center">
                     <i class="fas fa-users fa-2x"></i>
@@ -30,11 +30,11 @@
         <div class="stat-card stat-card-green">
             <div class="d-flex justify-content-between">
                 <div>
-                    <h3>{{ stats.total_trainings }}</h3>
-                    <p class="mb-0">Total Trainings</p>
+                    <h3>{{ stats.total_households|default:0 }}</h3>
+                    <p class="mb-0">Total Households</p>
                 </div>
                 <div class="align-self-center">
-                    <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                    <i class="fas fa-home fa-2x"></i>
                 </div>
             </div>
         </div>
@@ -44,28 +44,64 @@
         <div class="stat-card stat-card-orange">
             <div class="d-flex justify-content-between">
                 <div>
-                    <h3>{{ stats.active_trainings }}</h3>
-                    <p class="mb-0">Active Trainings</p>
+                    <h3>{{ stats.total_villages|default:0 }}</h3>
+                    <p class="mb-0">Total Villages</p>
                 </div>
                 <div class="align-self-center">
-                    <i class="fas fa-play-circle fa-2x"></i>
+                    <i class="fas fa-map-marker-alt fa-2x"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <h3>{{ stats.households_in_training }}</h3>
-                    <p class="mb-0">Households in Training</p>
-                </div>
-                <div class="align-self-center">
-                    <i class="fas fa-home fa-2x"></i>
+        <a href="{% url 'dashboard:activity_logs' %}?type=visits" class="text-decoration-none">
+            <div class="stat-card" style="cursor: pointer;">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ stats.visits_this_month|default:0 }}</h3>
+                        <p class="mb-0">Visits This Month</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-walking fa-2x"></i>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
+    </div>
+</div>
+
+<!-- Calls This Month Card -->
+<div class="row mt-3">
+    <div class="col-md-3">
+        <a href="{% url 'dashboard:activity_logs' %}?type=calls" class="text-decoration-none">
+            <div class="stat-card stat-card-purple" style="cursor: pointer;">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ stats.calls_this_month|default:0 }}</h3>
+                        <p class="mb-0">Calls This Month</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-phone fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'dashboard:activity_logs' %}" class="text-decoration-none">
+            <div class="stat-card stat-card-teal" style="cursor: pointer;">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ stats.visits_this_month|default:0|add:stats.calls_this_month|default:0 }}</h3>
+                        <p class="mb-0">Total Activities</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tasks fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
     </div>
 </div>
 
@@ -140,10 +176,10 @@
                 <h6><i class="fas fa-chalkboard-teacher"></i> Training Management</h6>
             </div>
             <div class="card-body">
-                <p><strong>Total Training Sessions:</strong><br>{{ stats.total_trainings }}</p>
-                <p><strong>Active Sessions:</strong><br>{{ stats.active_trainings }}</p>
-                <p><strong>Households Enrolled:</strong><br>{{ stats.households_in_training }}</p>
-                <p class="mb-0"><strong>Completion Rate:</strong><br>85%</p>
+                <p><strong>Total Training Sessions:</strong><br>{{ stats.total_trainings|default:0 }}</p>
+                <p><strong>Active Sessions:</strong><br>{{ stats.active_trainings|default:0 }}</p>
+                <p><strong>Households Enrolled:</strong><br>{{ stats.households_in_training|default:0 }}</p>
+                <p class="mb-0"><strong>Phone Calls:</strong><br>{{ stats.calls_this_month|default:0 }}</p>
             </div>
         </div>
     </div>
@@ -155,10 +191,15 @@
                 <h6><i class="fas fa-user-friends"></i> Mentor Supervision</h6>
             </div>
             <div class="card-body">
-                <p><strong>Mentors Supervised:</strong><br>{{ stats.managed_mentors }}</p>
-                <p><strong>Active Mentors:</strong><br>{{ stats.managed_mentors }}</p>
-                <p><strong>Performance Rating:</strong><br>92% Average</p>
-                <p class="mb-0"><strong>Training Compliance:</strong><br>98%</p>
+                <p><strong>Mentors Supervised:</strong><br>{{ stats.managed_mentors|default:0 }}</p>
+                <p><strong>Total Households:</strong><br>{{ stats.total_households|default:0 }}</p>
+                <p><strong>Visits This Month:</strong><br>
+                    <a href="{% url 'dashboard:activity_logs' %}?type=visits">{{ stats.visits_this_month|default:0 }}</a>
+                </p>
+                <p><strong>Calls This Month:</strong><br>
+                    <a href="{% url 'dashboard:activity_logs' %}?type=calls">{{ stats.calls_this_month|default:0 }}</a>
+                </p>
+                <p class="mb-0"><strong>Total Time:</strong><br>{{ stats.total_hours|default:0 }}h {{ stats.total_minutes|default:0 }}m</p>
             </div>
         </div>
     </div>
@@ -170,29 +211,106 @@
                 <h6><i class="fas fa-map-marked-alt"></i> Field Operations</h6>
             </div>
             <div class="card-body">
-                <p><strong>Villages Covered:</strong><br>8 Villages</p>
-                <p><strong>Field Visits This Month:</strong><br>45 Visits</p>
-                <p><strong>Household Coverage:</strong><br>95%</p>
-                <p class="mb-0"><strong>Data Collection:</strong><br>Current</p>
+                <p><strong>Villages Covered:</strong><br>{{ stats.total_villages|default:0 }} Villages</p>
+                <p><strong>Field Visits This Month:</strong><br>{{ stats.visits_this_month|default:0 }} Visits</p>
+                <p><strong>Phone Calls This Month:</strong><br>{{ stats.calls_this_month|default:0 }} Calls</p>
+                <p class="mb-0"><strong>Total Activity:</strong><br>{% widthratio stats.visits_this_month|default:0 1 1 %}+{% widthratio stats.calls_this_month|default:0 1 1 %}</p>
             </div>
         </div>
     </div>
 
-    <!-- Program Performance -->
+    <!-- Data Quality -->
     <div class="col-md-6 col-lg-3">
         <div class="card border-info">
             <div class="card-header bg-info text-white">
-                <h6><i class="fas fa-trophy"></i> Program Performance</h6>
+                <h6><i class="fas fa-check-circle"></i> Data Quality</h6>
             </div>
             <div class="card-body">
-                <p><strong>UPG Program Progress:</strong><br>Month 8 of 12</p>
-                <p><strong>Graduation Rate:</strong><br>78%</p>
-                <p><strong>Goal Achievement:</strong><br>On Track</p>
-                <p class="mb-0"><strong>Quality Score:</strong><br>94%</p>
+                {% if data_quality %}
+                <p><strong>Quality Score:</strong><br><span class="badge bg-{% if data_quality.quality_score >= 80 %}success{% elif data_quality.quality_score >= 60 %}warning{% else %}danger{% endif %} fs-6">{{ data_quality.quality_score }}%</span></p>
+                <p><strong>Total Records:</strong><br>{{ data_quality.total_records|default:0 }}</p>
+                <p><strong>Issues Found:</strong><br>{{ data_quality.issues_count|default:0 }}</p>
+                <p class="mb-0"><strong>High Priority:</strong><br>{{ data_quality.summary.high_severity|default:0 }}</p>
+                {% else %}
+                <p class="text-muted">No data available</p>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<!-- Mentor Performance Table -->
+{% if mentor_performance %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Mentor Performance (This Month)</h5>
+                <a href="{% url 'dashboard:activity_logs' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Activity Logs
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mentor</th>
+                                <th>Villages</th>
+                                <th>Households</th>
+                                <th>Visits</th>
+                                <th>Calls</th>
+                                <th>Total Activity</th>
+                                <th>Total Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mentor in mentor_performance %}
+                            <tr>
+                                <td>{{ mentor.name }}</td>
+                                <td>{{ mentor.villages }}</td>
+                                <td>{{ mentor.households }}</td>
+                                <td>
+                                    <a href="{% url 'dashboard:activity_logs' %}?mentor={{ mentor.mentor.id }}&type=visits" class="text-decoration-none">
+                                        <span class="badge bg-success">{{ mentor.visits_30d }}</span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:activity_logs' %}?mentor={{ mentor.mentor.id }}&type=calls" class="text-decoration-none">
+                                        <span class="badge bg-info">{{ mentor.calls_30d }}</span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:activity_logs' %}?mentor={{ mentor.mentor.id }}" class="text-decoration-none">
+                                        <strong>{{ mentor.total_activity }}</strong>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ mentor.total_duration }} min</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-muted text-center">No mentors supervised</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th colspan="3">Total</th>
+                                <th>{{ stats.visits_this_month }}</th>
+                                <th>{{ stats.calls_this_month }}</th>
+                                <th>{{ stats.visits_this_month|add:stats.calls_this_month }}</th>
+                                <th>{{ stats.total_hours }}h {{ stats.total_minutes }}m</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Field Associate Workflow -->
 <div class="row mt-4">

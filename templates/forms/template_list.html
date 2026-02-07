@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}Form Templates - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-clipboard-list"></i> Form Templates</h2>
+                    <p class="text-muted">All form templates in the system</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'forms:import_template' %}" class="btn btn-outline-success">
+                        <i class="fas fa-file-import"></i> Import Form
+                    </a>
+                    <a href="{% url 'forms:template_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Form
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if templates %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Fields</th>
+                                    <th>Submissions</th>
+                                    <th>Status</th>
+                                    <th>Kobo Sync</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for template in templates %}
+                                <tr>
+                                    <td>{{ template.name }}</td>
+                                    <td>{{ template.get_form_type_display }}</td>
+                                    <td>{{ template.fields.count }}</td>
+                                    <td>
+                                        <a href="{% url 'forms:form_submissions' template.id %}" class="text-decoration-none">
+                                            {{ template.submissions.count }} <i class="fas fa-external-link-alt small"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if template.status == 'active' %}success{% elif template.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                            {{ template.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if template.sync_to_kobo %}
+                                            {% if template.kobo_asset_uid %}
+                                            <span class="badge bg-success" title="Synced to Kobo">
+                                                <i class="fas fa-check"></i> Synced
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        {% else %}
+                                        <span class="badge bg-secondary">Disabled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ template.created_by.get_full_name }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'forms:template_builder' template.id %}" class="btn btn-sm btn-primary" title="Edit Form">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-secondary" onclick="copyTemplate({{ template.id }}, '{{ template.name|escapejs }}')" title="Copy Form">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            <a href="{% url 'forms:form_submissions' template.id %}" class="btn btn-sm btn-info" title="View Submissions">
+                                                <i class="fas fa-list-alt"></i>
+                                            </a>
+                                            {% if template.kobo_asset_uid %}
+                                            <button type="button" class="btn btn-sm btn-success" onclick="fetchFromKobo({{ template.id }}, '{{ template.name|escapejs }}')" title="Fetch from Kobo">
+                                                <i class="fas fa-cloud-download-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No form templates created yet</p>
+                        <a href="{% url 'forms:template_create' %}" class="btn btn-primary">Create Your First Form</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fetch Status Modal -->
+<div class="modal fade" id="fetchStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Fetching Submissions</h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="fetchLoading">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Fetching submissions from KoboToolbox for <strong id="fetchFormName"></strong>...</p>
+                </div>
+                <div id="fetchResult" style="display: none;">
+                    <i class="fas fa-check-circle text-success fa-3x mb-3" id="fetchSuccess" style="display: none;"></i>
+                    <i class="fas fa-times-circle text-danger fa-3x mb-3" id="fetchError" style="display: none;"></i>
+                    <p id="fetchMessage"></p>
+                </div>
+            </div>
+            <div class="modal-footer" id="fetchModalFooter" style="display: none;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="viewSubmissionsBtn" class="btn btn-primary">View Submissions</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function copyTemplate(templateId, formName) {
+    if (!confirm(`Create a copy of "${formName}"?`)) {
+        return;
+    }
+
+    fetch('/forms/templates/' + templateId + '/copy/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error copying form: ' + error.message);
+    });
+}
+
+function fetchFromKobo(templateId, formName) {
+    const modal = new bootstrap.Modal(document.getElementById('fetchStatusModal'));
+    modal.show();
+
+    // Reset modal state
+    document.getElementById('fetchLoading').style.display = 'block';
+    document.getElementById('fetchResult').style.display = 'none';
+    document.getElementById('fetchModalFooter').style.display = 'none';
+    document.getElementById('fetchFormName').textContent = formName;
+
+    fetch('/forms/templates/' + templateId + '/fetch-submissions/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('fetchLoading').style.display = 'none';
+        document.getElementById('fetchResult').style.display = 'block';
+        document.getElementById('fetchModalFooter').style.display = 'flex';
+
+        if (data.success) {
+            document.getElementById('fetchSuccess').style.display = 'block';
+            document.getElementById('fetchError').style.display = 'none';
+        } else {
+            document.getElementById('fetchSuccess').style.display = 'none';
+            document.getElementById('fetchError').style.display = 'block';
+        }
+
+        document.getElementById('fetchMessage').textContent = data.message;
+        document.getElementById('viewSubmissionsBtn').href = '/forms/templates/' + templateId + '/submissions/';
+    })
+    .catch(error => {
+        document.getElementById('fetchLoading').style.display = 'none';
+        document.getElementById('fetchResult').style.display = 'block';
+        document.getElementById('fetchModalFooter').style.display = 'flex';
+        document.getElementById('fetchSuccess').style.display = 'none';
+        document.getElementById('fetchError').style.display = 'block';
+        document.getElementById('fetchMessage').textContent = 'Error: ' + error.message;
+        document.getElementById('viewSubmissionsBtn').href = '/forms/templates/' + templateId + '/submissions/';
+    });
+}
+</script>
+{% endblock %}

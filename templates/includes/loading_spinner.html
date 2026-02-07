@@ -1,0 +1,298 @@
+<!-- Loading Spinner Component -->
+<!--
+Usage:
+1. Full page overlay:
+   showPageLoading('Loading data...');
+   hidePageLoading();
+
+2. Button loading state:
+   <button class="btn btn-primary btn-loading" data-loading-text="Saving...">
+       Save Changes
+   </button>
+
+3. Inline spinner:
+   <span class="spinner-inline"></span> Loading...
+
+4. Card loading overlay:
+   <div class="card position-relative">
+       <div class="card-loading-overlay">
+           <div class="spinner-border text-primary"></div>
+       </div>
+       ... card content ...
+   </div>
+-->
+
+<!-- Full Page Loading Overlay -->
+<div id="pageLoadingOverlay" class="page-loading-overlay d-none">
+    <div class="loading-content">
+        <div class="spinner-wrapper">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <p class="loading-message mt-3 mb-0">Please wait...</p>
+    </div>
+</div>
+
+<style>
+/* Full Page Loading Overlay */
+.page-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+.page-loading-overlay .loading-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.page-loading-overlay .spinner-wrapper {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto;
+}
+
+.page-loading-overlay .spinner-border {
+    width: 64px;
+    height: 64px;
+    border-width: 4px;
+}
+
+.page-loading-overlay .loading-message {
+    color: #495057;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* Button Loading State */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn-loading.is-loading {
+    color: transparent !important;
+}
+
+.btn-loading.is-loading::after {
+    content: "";
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    top: 50%;
+    left: 50%;
+    margin-left: -0.5rem;
+    margin-top: -0.5rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+.btn-loading.is-loading[data-loading-text]::before {
+    content: attr(data-loading-text);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: inherit;
+    white-space: nowrap;
+}
+
+/* Inline Spinner */
+.spinner-inline {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+    vertical-align: middle;
+}
+
+/* Card Loading Overlay */
+.card-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: inherit;
+}
+
+.card-loading-overlay .spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Skeleton Loading */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-text {
+    height: 1em;
+    margin-bottom: 0.5em;
+}
+
+.skeleton-text:last-child {
+    width: 75%;
+}
+
+.skeleton-title {
+    height: 1.5em;
+    width: 50%;
+    margin-bottom: 1em;
+}
+
+.skeleton-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.skeleton-image {
+    height: 200px;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Progress Bar Loading */
+.progress-loading {
+    height: 3px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    background: #e9ecef;
+}
+
+.progress-loading .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #007bff, #00d4ff);
+    animation: progress-indeterminate 1.5s infinite;
+}
+
+@keyframes progress-indeterminate {
+    0% {
+        width: 0%;
+        margin-left: 0%;
+    }
+    50% {
+        width: 50%;
+        margin-left: 25%;
+    }
+    100% {
+        width: 0%;
+        margin-left: 100%;
+    }
+}
+</style>
+
+<script>
+// Page loading functions
+function showPageLoading(message) {
+    const overlay = document.getElementById('pageLoadingOverlay');
+    if (overlay) {
+        const msgEl = overlay.querySelector('.loading-message');
+        if (msgEl && message) {
+            msgEl.textContent = message;
+        }
+        overlay.classList.remove('d-none');
+    }
+}
+
+function hidePageLoading() {
+    const overlay = document.getElementById('pageLoadingOverlay');
+    if (overlay) {
+        overlay.classList.add('d-none');
+    }
+}
+
+// Button loading state
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submissions with loading buttons
+    document.querySelectorAll('form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"].btn-loading');
+            if (submitBtn && !submitBtn.classList.contains('is-loading')) {
+                submitBtn.classList.add('is-loading');
+                submitBtn.dataset.originalText = submitBtn.innerHTML;
+
+                // Reset after timeout if form doesn't navigate
+                setTimeout(function() {
+                    if (submitBtn.classList.contains('is-loading')) {
+                        submitBtn.classList.remove('is-loading');
+                        submitBtn.innerHTML = submitBtn.dataset.originalText;
+                    }
+                }, 30000); // 30 second timeout
+            }
+        });
+    });
+
+    // Handle individual button clicks
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-loading:not(button[type="submit"])');
+        if (btn && !btn.classList.contains('is-loading')) {
+            btn.classList.add('is-loading');
+            btn.dataset.originalText = btn.innerHTML;
+        }
+    });
+});
+
+// Helper to show card loading
+function showCardLoading(cardSelector) {
+    const card = document.querySelector(cardSelector);
+    if (card) {
+        card.classList.add('position-relative');
+        const overlay = document.createElement('div');
+        overlay.className = 'card-loading-overlay';
+        overlay.innerHTML = '<div class="spinner-border text-primary"></div>';
+        card.appendChild(overlay);
+    }
+}
+
+function hideCardLoading(cardSelector) {
+    const card = document.querySelector(cardSelector);
+    if (card) {
+        const overlay = card.querySelector('.card-loading-overlay');
+        if (overlay) overlay.remove();
+    }
+}
+
+// Helper to reset button loading
+function resetButtonLoading(btn) {
+    if (btn && btn.classList.contains('is-loading')) {
+        btn.classList.remove('is-loading');
+        if (btn.dataset.originalText) {
+            btn.innerHTML = btn.dataset.originalText;
+        }
+    }
+}
+</script>

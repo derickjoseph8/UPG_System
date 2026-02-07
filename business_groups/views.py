@@ -11,24 +11,69 @@ from datetime import date
 def group_list(request):
     """Business Groups list view with role-based filtering"""
     user = request.user
+    from django.db.models import Q, Count
+    from accounts.models import User as UserModel, UserProfile
 
-    # Filter business groups based on user role and village assignments
-    if user.is_superuser or user.role in ['ict_admin', 'me_staff']:
-        # Full access to all business groups
-        groups = BusinessGroup.objects.all()
-    elif user.role in ['mentor', 'field_associate']:
-        # Only groups with members from assigned villages
-        if hasattr(user, 'profile') and user.profile:
-            assigned_villages = user.profile.assigned_villages.all()
-            groups = BusinessGroup.objects.filter(
-                members__household__village__in=assigned_villages
-            ).distinct()
+    # Get accessible villages based on user role
+    accessible_village_ids = []
+
+    if user.role == 'mentor' and not user.is_superuser:
+        # Mentor sees their assigned villages
+        try:
+            profile = user.profile
+        except UserProfile.DoesNotExist:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        if profile:
+            accessible_village_ids = list(profile.assigned_villages.values_list('id', flat=True))
+
+    elif user.role == 'field_associate' and not user.is_superuser:
+        # FA sees villages from supervised mentors
+        supervised_mentors = UserModel.objects.filter(
+            role='mentor',
+            is_active=True,
+            profile__supervisor=user
+        )
+        for mentor in supervised_mentors:
+            if hasattr(mentor, 'profile') and mentor.profile:
+                mentor_villages = list(mentor.profile.assigned_villages.values_list('id', flat=True))
+                accessible_village_ids.extend(mentor_villages)
+        accessible_village_ids = list(set(accessible_village_ids))
+
+    # Filter groups based on role
+    if user.role in ['mentor', 'field_associate'] and not user.is_superuser:
+        if accessible_village_ids:
+            # Show groups that have:
+            # 1. Members from accessible villages, OR
+            # 2. No members yet (newly created groups), OR
+            # 3. Groups created by this user (if created_by field exists)
+            groups_with_members = BusinessGroup.objects.filter(
+                members__household__village_id__in=accessible_village_ids
+            ).values_list('id', flat=True)
+
+            groups_without_members = BusinessGroup.objects.annotate(
+                member_count=Count('members')
+            ).filter(member_count=0).values_list('id', flat=True)
+
+            # Also include groups created by this user
+            user_created = BusinessGroup.objects.filter(created_by=user).values_list('id', flat=True)
+
+            # Combine: groups with accessible members + groups with no members + user created
+            all_accessible_ids = list(set(
+                list(groups_with_members) +
+                list(groups_without_members) +
+                list(user_created)
+            ))
+
+            groups = BusinessGroup.objects.filter(id__in=all_accessible_ids)
         else:
-            # No villages assigned, no groups visible
-            groups = BusinessGroup.objects.none()
+            # No villages accessible - show groups without members (they might add members)
+            groups = BusinessGroup.objects.annotate(
+                member_count=Count('members')
+            ).filter(member_count=0)
     else:
-        # Other roles have no access to business groups
-        groups = BusinessGroup.objects.none()
+        # All other roles (ICT Admin, PM, M&E, Executive, etc.) see all groups
+        groups = BusinessGroup.objects.all()
 
     groups = groups.order_by('-created_at')
 
@@ -58,7 +103,8 @@ def group_create(request):
                 business_type=business_type or 'crop',
                 business_type_detail=business_type_detail,
                 group_size=int(group_size),
-                formation_date=formation_date
+                formation_date=formation_date,
+                created_by=request.user  # Track who created the group
             )
             messages.success(request, f'Business group "{group.name}" created successfully!')
             return redirect('business_groups:group_detail', pk=group.pk)
@@ -77,8 +123,17 @@ def group_create(request):
 def group_detail(request, pk):
     """Business group detail view"""
     group = get_object_or_404(BusinessGroup, pk=pk)
+
+    # Get active and inactive members separately
+    active_members = group.members.filter(is_active=True)
+    inactive_members = group.members.filter(is_active=False)
+
     context = {
         'group': group,
+        'active_members': active_members,
+        'inactive_members': inactive_members,
+        'active_member_count': active_members.count(),
+        'total_member_count': group.members.count(),
         'page_title': f'Business Group - {group.name}',
     }
     return render(request, 'business_groups/group_detail.html', context)
@@ -148,16 +203,25 @@ def add_member(request, pk):
 
 @login_required
 def remove_member(request, pk, member_id):
-    """Remove household from business group"""
+    """Remove household from business group (soft delete - sets is_active=False)"""
     group = get_object_or_404(BusinessGroup, pk=pk)
     member = get_object_or_404(BusinessGroupMember, id=member_id, business_group=group)
 
     if request.method == 'POST':
         household_name = member.household.name
-        member.delete()
+        # Soft delete - mark as inactive instead of deleting
+        member.is_active = False
+        member.save()
         messages.success(request, f'{household_name} removed from {group.name}.')
+        return redirect('business_groups:group_detail', pk=pk)
 
-    return redirect('business_groups:group_detail', pk=pk)
+    # Show confirmation page
+    context = {
+        'group': group,
+        'member': member,
+        'page_title': f'Remove Member from {group.name}',
+    }
+    return render(request, 'business_groups/remove_member_confirm.html', context)
 
 @login_required
 def update_member_role(request, pk, member_id):

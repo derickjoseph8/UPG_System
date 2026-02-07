@@ -1,0 +1,1353 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Fill Form - {{ assignment.form_template.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Multi-step form wizard styles */
+    .form-wizard {
+        position: relative;
+    }
+
+    .wizard-progress {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        padding: 0 10px;
+        position: relative;
+    }
+
+    .wizard-progress::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 30px;
+        right: 30px;
+        height: 3px;
+        background: #e9ecef;
+        z-index: 0;
+    }
+
+    .wizard-progress-bar {
+        position: absolute;
+        top: 15px;
+        left: 30px;
+        height: 3px;
+        background: #198754;
+        z-index: 1;
+        transition: width 0.3s ease;
+    }
+
+    .wizard-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        cursor: pointer;
+    }
+
+    .wizard-step-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        border: 2px solid #e9ecef;
+    }
+
+    .wizard-step.active .wizard-step-number {
+        background: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+
+    .wizard-step.completed .wizard-step-number {
+        background: #198754;
+        color: white;
+        border-color: #198754;
+    }
+
+    .wizard-step-label {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #6c757d;
+        text-align: center;
+        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wizard-step.active .wizard-step-label {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+
+    .wizard-step.completed .wizard-step-label {
+        color: #198754;
+    }
+
+    /* Form page styles */
+    .form-page {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .form-page.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-page-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        border-left: 4px solid #0d6efd;
+    }
+
+    .form-page-header h4 {
+        margin: 0;
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .form-page-header p {
+        margin: 5px 0 0 0;
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    /* Field styling */
+    .form-field-container {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .form-field-container:hover {
+        border-color: #dee2e6;
+    }
+
+    .form-field-container:focus-within {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+    }
+
+    .field-label {
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #212529;
+    }
+
+    .field-required {
+        color: #dc3545;
+        margin-left: 3px;
+    }
+
+    .field-help-text {
+        font-size: 13px;
+        color: #6c757d;
+        margin-top: 6px;
+    }
+
+    /* Rating field */
+    .rating-group {
+        display: flex;
+        gap: 8px;
+    }
+
+    .rating-btn {
+        width: 45px;
+        height: 45px;
+        border: 2px solid #dee2e6;
+        background: #fff;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .rating-btn:hover {
+        border-color: #ffc107;
+        background: #fff9e6;
+    }
+
+    .rating-btn.selected {
+        border-color: #ffc107;
+        background: #ffc107;
+        color: #212529;
+    }
+
+    /* Boolean field */
+    .boolean-group {
+        display: flex;
+        gap: 15px;
+    }
+
+    .boolean-btn {
+        flex: 1;
+        padding: 12px 20px;
+        border: 2px solid #dee2e6;
+        background: #fff;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+    }
+
+    .boolean-btn:hover {
+        border-color: #0d6efd;
+        background: #f0f6ff;
+    }
+
+    .boolean-btn.selected.yes {
+        border-color: #198754;
+        background: #198754;
+        color: white;
+    }
+
+    .boolean-btn.selected.no {
+        border-color: #dc3545;
+        background: #dc3545;
+        color: white;
+    }
+
+    /* Radio/Checkbox styling */
+    .choice-option {
+        padding: 10px 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .choice-option:hover {
+        background: #f8f9fa;
+        border-color: #0d6efd;
+    }
+
+    .choice-option input:checked + .choice-label {
+        color: #0d6efd;
+        font-weight: 500;
+    }
+
+    .choice-option:has(input:checked) {
+        border-color: #0d6efd;
+        background: #f0f6ff;
+    }
+
+    /* Location field */
+    .location-inputs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .get-location-btn {
+        margin-top: 10px;
+    }
+
+    /* Note field (display only) */
+    .note-field {
+        background: #e7f1ff;
+        border-left: 4px solid #0d6efd;
+        padding: 15px;
+        border-radius: 6px;
+        color: #084298;
+    }
+
+    /* Section header */
+    .section-header {
+        background: linear-gradient(135deg, #212529 0%, #495057 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin: 25px 0 20px 0;
+    }
+
+    .section-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    /* Navigation buttons */
+    .wizard-navigation {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 20px;
+        border-top: 1px solid #e9ecef;
+        margin-top: 30px;
+    }
+
+    .btn-wizard {
+        padding: 12px 30px;
+        font-weight: 500;
+        border-radius: 8px;
+    }
+
+    /* Page counter */
+    .page-counter {
+        text-align: center;
+        color: #6c757d;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    /* Signature canvas */
+    .signature-canvas {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        background: #fff;
+        cursor: crosshair;
+    }
+
+    /* Range slider */
+    .range-slider {
+        width: 100%;
+        height: 8px;
+        -webkit-appearance: none;
+        border-radius: 4px;
+        background: #e9ecef;
+    }
+
+    .range-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #0d6efd;
+        cursor: pointer;
+    }
+
+    .range-value {
+        text-align: center;
+        font-weight: 600;
+        font-size: 18px;
+        color: #0d6efd;
+        margin-top: 10px;
+    }
+
+    /* File upload styling */
+    .file-upload-wrapper {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .file-upload-wrapper:hover {
+        border-color: #0d6efd;
+        background: #f8f9fa;
+    }
+
+    .file-upload-wrapper.dragover {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+    }
+
+    .file-upload-icon {
+        font-size: 40px;
+        color: #6c757d;
+        margin-bottom: 10px;
+    }
+
+    /* Calculated field */
+    .calculated-field {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #198754;
+        text-align: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .wizard-progress {
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .wizard-step-label {
+            font-size: 10px;
+            max-width: 60px;
+        }
+
+        .location-inputs {
+            grid-template-columns: 1fr;
+        }
+
+        .boolean-group {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2><i class="fas fa-edit"></i> {{ assignment.form_template.name }}</h2>
+                    <p class="text-muted mb-0">{{ assignment.form_template.description|default:"Complete the form below" }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'forms:my_assignments' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Assignments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="wizardForm" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="form-wizard">
+                            <!-- Progress indicator -->
+                            <div class="wizard-progress" id="wizardProgress">
+                                <!-- Steps will be generated by JavaScript -->
+                            </div>
+                            <div class="page-counter" id="pageCounter"></div>
+
+                            <!-- Form pages container -->
+                            <div id="formPagesContainer">
+                                <!-- Pages will be generated by JavaScript -->
+                            </div>
+
+                            <!-- Navigation buttons -->
+                            <div class="wizard-navigation">
+                                <button type="button" class="btn btn-outline-secondary btn-wizard" id="prevBtn" onclick="navigatePage(-1)" style="display: none;">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <div class="flex-grow-1"></div>
+                                <button type="button" class="btn btn-primary btn-wizard" id="nextBtn" onclick="navigatePage(1)">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button type="submit" class="btn btn-success btn-wizard" id="submitBtn" style="display: none;">
+                                    <i class="fas fa-check"></i> Submit Form
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <!-- Assignment Info Card -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle text-primary"></i> Assignment Info</h6>
+                </div>
+                <div class="card-body">
+                    {% if assignment.household %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Household</small>
+                        <strong>{{ assignment.household.name }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if assignment.business_group %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Business Group</small>
+                        <strong>{{ assignment.business_group.name }}</strong>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Due Date</small>
+                        <strong>{{ assignment.due_date|date:"M d, Y"|default:"No deadline" }}</strong>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Assigned By</small>
+                        <strong>{{ assignment.assigned_by.get_full_name }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Progress Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="fas fa-tasks text-success"></i> Progress</h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar bg-success" id="overallProgress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted"><span id="completedFields">0</span> of <span id="totalFields">0</span> fields completed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form fields data from Django
+    const formFields = [
+        {% for field in form_fields %}
+        {
+            id: {{ field.id }},
+            name: "{{ field.field_name|escapejs }}",
+            label: "{{ field.field_label|escapejs }}",
+            type: "{{ field.field_type }}",
+            required: {{ field.required|yesno:"true,false" }},
+            helpText: "{{ field.help_text|escapejs }}",
+            placeholder: "{{ field.placeholder|escapejs }}",
+            defaultValue: "{{ field.default_value|escapejs }}",
+            choices: {{ field.choices|safe|default:"[]" }},
+            minValue: {{ field.min_value|default:"null" }},
+            maxValue: {{ field.max_value|default:"null" }},
+            minLength: {{ field.min_length|default:"null" }},
+            maxLength: {{ field.max_length|default:"null" }},
+            showIfField: "{{ field.show_if_field|escapejs }}",
+            showIfValue: "{{ field.show_if_value|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Configuration
+    const FIELDS_PER_PAGE = 6; // Number of fields per page (can be overridden by sections)
+    let currentPage = 0;
+    let pages = [];
+    let formData = {};
+
+    // Initialize the form wizard
+    document.addEventListener('DOMContentLoaded', function() {
+        buildFormPages();
+        renderWizard();
+        updateNavigation();
+        setupFormValidation();
+    });
+
+    // Build form pages - group fields into pages
+    function buildFormPages() {
+        pages = [];
+        let currentPageFields = [];
+        let currentPageTitle = 'Page 1';
+        let pageCount = 1;
+
+        formFields.forEach((field, index) => {
+            // Section and group fields mark new pages
+            if (field.type === 'section' || field.type === 'group') {
+                // Save current page if it has fields
+                if (currentPageFields.length > 0) {
+                    pages.push({
+                        title: currentPageTitle,
+                        fields: currentPageFields
+                    });
+                }
+                // Start new page with section title
+                currentPageTitle = field.label || `Page ${pageCount + 1}`;
+                currentPageFields = [];
+                pageCount++;
+            } else {
+                currentPageFields.push(field);
+
+                // Auto-paginate if too many fields
+                if (currentPageFields.length >= FIELDS_PER_PAGE) {
+                    pages.push({
+                        title: currentPageTitle,
+                        fields: currentPageFields
+                    });
+                    pageCount++;
+                    currentPageTitle = `Page ${pageCount}`;
+                    currentPageFields = [];
+                }
+            }
+        });
+
+        // Add remaining fields
+        if (currentPageFields.length > 0) {
+            pages.push({
+                title: currentPageTitle,
+                fields: currentPageFields
+            });
+        }
+
+        // Ensure at least one page
+        if (pages.length === 0) {
+            pages.push({
+                title: 'Form',
+                fields: []
+            });
+        }
+    }
+
+    // Render the wizard UI
+    function renderWizard() {
+        renderProgressSteps();
+        renderFormPages();
+        updatePageCounter();
+        updateOverallProgress();
+    }
+
+    // Render progress steps
+    function renderProgressSteps() {
+        const container = document.getElementById('wizardProgress');
+
+        // Only show progress bar if more than 1 page
+        if (pages.length <= 1) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Calculate progress bar width
+        const progressWidth = pages.length > 1 ? (currentPage / (pages.length - 1)) * 100 : 0;
+
+        let html = `<div class="wizard-progress-bar" style="width: calc(${progressWidth}% - 60px * ${progressWidth / 100});"></div>`;
+
+        pages.forEach((page, index) => {
+            const isActive = index === currentPage;
+            const isCompleted = index < currentPage;
+            const statusClass = isActive ? 'active' : (isCompleted ? 'completed' : '');
+
+            html += `
+                <div class="wizard-step ${statusClass}" onclick="goToPage(${index})" title="${page.title}">
+                    <div class="wizard-step-number">
+                        ${isCompleted ? '<i class="fas fa-check"></i>' : (index + 1)}
+                    </div>
+                    <span class="wizard-step-label">${page.title}</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // Render form pages
+    function renderFormPages() {
+        const container = document.getElementById('formPagesContainer');
+        let html = '';
+
+        pages.forEach((page, pageIndex) => {
+            const isActive = pageIndex === currentPage;
+            html += `
+                <div class="form-page ${isActive ? 'active' : ''}" id="page-${pageIndex}">
+                    <div class="form-page-header">
+                        <h4><i class="fas fa-clipboard-list me-2"></i>${page.title}</h4>
+                        ${page.fields.length > 0 ? `<p>${page.fields.length} field${page.fields.length > 1 ? 's' : ''} on this page</p>` : ''}
+                    </div>
+                    ${page.fields.map(field => renderField(field)).join('')}
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // Initialize special field types
+        initializeSpecialFields();
+    }
+
+    // Render individual field based on type
+    function renderField(field) {
+        const requiredMark = field.required ? '<span class="field-required">*</span>' : '';
+        const helpText = field.helpText ? `<div class="field-help-text"><i class="fas fa-info-circle me-1"></i>${field.helpText}</div>` : '';
+        const conditionalAttr = field.showIfField ? `data-show-if-field="${field.showIfField}" data-show-if-value="${field.showIfValue}"` : '';
+
+        let fieldHtml = '';
+
+        switch(field.type) {
+            case 'text':
+                fieldHtml = `
+                    <input type="text" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || ''}"
+                        ${field.required ? 'required' : ''}
+                        ${field.maxLength ? `maxlength="${field.maxLength}"` : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'textarea':
+                fieldHtml = `
+                    <textarea class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        rows="4" placeholder="${field.placeholder || ''}"
+                        ${field.required ? 'required' : ''}
+                        ${field.maxLength ? `maxlength="${field.maxLength}"` : ''}>${field.defaultValue || ''}</textarea>
+                `;
+                break;
+
+            case 'note':
+                return `
+                    <div class="form-field-container" ${conditionalAttr}>
+                        <div class="note-field">
+                            <i class="fas fa-info-circle me-2"></i>${field.label}
+                        </div>
+                    </div>
+                `;
+
+            case 'number':
+                fieldHtml = `
+                    <input type="number" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || ''}"
+                        ${field.required ? 'required' : ''}
+                        ${field.minValue !== null ? `min="${field.minValue}"` : ''}
+                        ${field.maxValue !== null ? `max="${field.maxValue}"` : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'decimal':
+                fieldHtml = `
+                    <input type="number" step="0.01" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || ''}"
+                        ${field.required ? 'required' : ''}
+                        ${field.minValue !== null ? `min="${field.minValue}"` : ''}
+                        ${field.maxValue !== null ? `max="${field.maxValue}"` : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'calculate':
+                fieldHtml = `
+                    <div class="calculated-field" id="field_${field.id}">
+                        <i class="fas fa-calculator me-2"></i>
+                        <span id="calculated_value_${field.id}">--</span>
+                    </div>
+                    <input type="hidden" name="field_${field.id}" id="field_hidden_${field.id}">
+                `;
+                break;
+
+            case 'email':
+                fieldHtml = `
+                    <input type="email" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || 'email@example.com'}"
+                        ${field.required ? 'required' : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'phone':
+                fieldHtml = `
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                        <input type="tel" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                            placeholder="${field.placeholder || '07XXXXXXXX'}"
+                            pattern="^(07|01)[0-9]{8}$"
+                            ${field.required ? 'required' : ''}
+                            value="${field.defaultValue || ''}">
+                    </div>
+                    <small class="text-muted">Kenya format: 07XXXXXXXX or 01XXXXXXXX</small>
+                `;
+                break;
+
+            case 'date':
+                fieldHtml = `
+                    <input type="date" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'time':
+                fieldHtml = `
+                    <input type="time" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'datetime':
+                fieldHtml = `
+                    <input type="datetime-local" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+                break;
+
+            case 'select':
+                const options = Array.isArray(field.choices) ? field.choices : [];
+                fieldHtml = `
+                    <select class="form-select" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}>
+                        <option value="">-- Select an option --</option>
+                        ${options.map(opt => {
+                            const value = typeof opt === 'object' ? opt.value : opt;
+                            const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+                            return `<option value="${value}">${label}</option>`;
+                        }).join('')}
+                    </select>
+                `;
+                break;
+
+            case 'radio':
+                const radioOptions = Array.isArray(field.choices) ? field.choices : [];
+                fieldHtml = `
+                    <div class="radio-options">
+                        ${radioOptions.map((opt, idx) => {
+                            const value = typeof opt === 'object' ? opt.value : opt;
+                            const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+                            return `
+                                <label class="choice-option d-flex align-items-center">
+                                    <input type="radio" class="form-check-input me-3" name="field_${field.id}" value="${value}"
+                                        ${field.required && idx === 0 ? '' : ''}>
+                                    <span class="choice-label">${label}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                break;
+
+            case 'checkbox':
+                const checkOptions = Array.isArray(field.choices) ? field.choices : [];
+                if (checkOptions.length > 0) {
+                    fieldHtml = `
+                        <div class="checkbox-options">
+                            ${checkOptions.map(opt => {
+                                const value = typeof opt === 'object' ? opt.value : opt;
+                                const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+                                return `
+                                    <label class="choice-option d-flex align-items-center">
+                                        <input type="checkbox" class="form-check-input me-3" name="field_${field.id}" value="${value}">
+                                        <span class="choice-label">${label}</span>
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    fieldHtml = `
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="field_${field.id}" name="field_${field.id}" value="yes">
+                            <label class="form-check-label" for="field_${field.id}">Yes</label>
+                        </div>
+                    `;
+                }
+                break;
+
+            case 'boolean':
+                fieldHtml = `
+                    <div class="boolean-group">
+                        <button type="button" class="boolean-btn yes" data-value="yes" onclick="selectBoolean(this, ${field.id})">
+                            <i class="fas fa-check me-2"></i>Yes
+                        </button>
+                        <button type="button" class="boolean-btn no" data-value="no" onclick="selectBoolean(this, ${field.id})">
+                            <i class="fas fa-times me-2"></i>No
+                        </button>
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}" ${field.required ? 'required' : ''}>
+                `;
+                break;
+
+            case 'rating':
+                fieldHtml = `
+                    <div class="rating-group">
+                        ${[1, 2, 3, 4, 5].map(num => `
+                            <button type="button" class="rating-btn" data-value="${num}" onclick="selectRating(this, ${field.id})">
+                                ${num}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}" ${field.required ? 'required' : ''}>
+                `;
+                break;
+
+            case 'range':
+                const minVal = field.minValue !== null ? field.minValue : 0;
+                const maxVal = field.maxValue !== null ? field.maxValue : 100;
+                const defaultVal = field.defaultValue || Math.round((minVal + maxVal) / 2);
+                fieldHtml = `
+                    <input type="range" class="range-slider" id="field_${field.id}" name="field_${field.id}"
+                        min="${minVal}" max="${maxVal}" value="${defaultVal}"
+                        oninput="updateRangeValue(this)">
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>${minVal}</span>
+                        <span>${maxVal}</span>
+                    </div>
+                    <div class="range-value" id="range_value_${field.id}">${defaultVal}</div>
+                `;
+                break;
+
+            case 'location':
+                fieldHtml = `
+                    <div class="location-inputs">
+                        <div>
+                            <label class="small text-muted">Latitude</label>
+                            <input type="number" step="0.000001" class="form-control" id="field_${field.id}_lat" name="field_${field.id}_lat" placeholder="Latitude">
+                        </div>
+                        <div>
+                            <label class="small text-muted">Longitude</label>
+                            <input type="number" step="0.000001" class="form-control" id="field_${field.id}_lng" name="field_${field.id}_lng" placeholder="Longitude">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm get-location-btn" onclick="getLocation(${field.id})">
+                        <i class="fas fa-map-marker-alt me-1"></i> Get Current Location
+                    </button>
+                `;
+                break;
+
+            case 'file':
+                fieldHtml = `
+                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                        <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <p class="mb-1">Click to upload or drag and drop</p>
+                        <small class="text-muted">Any file type</small>
+                    </div>
+                    <input type="file" class="d-none" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        onchange="showFileName(this)">
+                    <div id="file_name_${field.id}" class="mt-2 text-success small"></div>
+                `;
+                break;
+
+            case 'image':
+                fieldHtml = `
+                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                        <div class="file-upload-icon"><i class="fas fa-camera"></i></div>
+                        <p class="mb-1">Click to upload or take a photo</p>
+                        <small class="text-muted">JPG, PNG, GIF up to 10MB</small>
+                    </div>
+                    <input type="file" accept="image/*" capture="environment" class="d-none" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        onchange="previewImage(this)">
+                    <div id="image_preview_${field.id}" class="mt-2"></div>
+                `;
+                break;
+
+            case 'audio':
+                fieldHtml = `
+                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                        <div class="file-upload-icon"><i class="fas fa-microphone"></i></div>
+                        <p class="mb-1">Click to upload audio recording</p>
+                        <small class="text-muted">MP3, WAV, M4A</small>
+                    </div>
+                    <input type="file" accept="audio/*" class="d-none" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        onchange="showFileName(this)">
+                    <div id="file_name_${field.id}" class="mt-2 text-success small"></div>
+                `;
+                break;
+
+            case 'video':
+                fieldHtml = `
+                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                        <div class="file-upload-icon"><i class="fas fa-video"></i></div>
+                        <p class="mb-1">Click to upload video</p>
+                        <small class="text-muted">MP4, MOV, AVI</small>
+                    </div>
+                    <input type="file" accept="video/*" class="d-none" id="field_${field.id}" name="field_${field.id}"
+                        ${field.required ? 'required' : ''}
+                        onchange="showFileName(this)">
+                    <div id="file_name_${field.id}" class="mt-2 text-success small"></div>
+                `;
+                break;
+
+            case 'signature':
+                fieldHtml = `
+                    <canvas id="signature_canvas_${field.id}" class="signature-canvas" width="400" height="150"></canvas>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSignature(${field.id})">
+                            <i class="fas fa-eraser me-1"></i> Clear
+                        </button>
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}" ${field.required ? 'required' : ''}>
+                `;
+                break;
+
+            case 'barcode':
+                fieldHtml = `
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                        <input type="text" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                            placeholder="Scan or enter barcode/QR code"
+                            ${field.required ? 'required' : ''}>
+                        <button type="button" class="btn btn-outline-secondary" onclick="scanBarcode(${field.id})">
+                            <i class="fas fa-qrcode"></i> Scan
+                        </button>
+                    </div>
+                `;
+                break;
+
+            default:
+                fieldHtml = `
+                    <input type="text" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || ''}"
+                        ${field.required ? 'required' : ''}
+                        value="${field.defaultValue || ''}">
+                `;
+        }
+
+        return `
+            <div class="form-field-container" ${conditionalAttr} id="container_${field.id}">
+                <label class="field-label" for="field_${field.id}">
+                    ${field.label}${requiredMark}
+                </label>
+                ${fieldHtml}
+                ${helpText}
+            </div>
+        `;
+    }
+
+    // Initialize special field interactions
+    function initializeSpecialFields() {
+        // Initialize signature canvases
+        document.querySelectorAll('.signature-canvas').forEach(canvas => {
+            initSignatureCanvas(canvas);
+        });
+
+        // Initialize conditional fields
+        initConditionalFields();
+
+        // Initialize file drag and drop
+        initFileDragDrop();
+    }
+
+    // Signature canvas initialization
+    function initSignatureCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            startDrawing({ offsetX: touch.clientX - rect.left, offsetY: touch.clientY - rect.top });
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            draw({ offsetX: touch.clientX - rect.left, offsetY: touch.clientY - rect.top });
+        });
+
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+
+            // Save signature data
+            const fieldId = canvas.id.replace('signature_canvas_', '');
+            document.getElementById(`field_${fieldId}`).value = canvas.toDataURL();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+    }
+
+    function clearSignature(fieldId) {
+        const canvas = document.getElementById(`signature_canvas_${fieldId}`);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById(`field_${fieldId}`).value = '';
+    }
+
+    // Conditional fields
+    function initConditionalFields() {
+        document.querySelectorAll('[data-show-if-field]').forEach(container => {
+            const dependsOn = container.dataset.showIfField;
+            const showValue = container.dataset.showIfValue;
+
+            // Find the field this depends on
+            const sourceField = document.querySelector(`[name="field_${dependsOn}"], [name*="${dependsOn}"]`);
+            if (sourceField) {
+                // Check initial state
+                checkConditional(container, sourceField, showValue);
+
+                // Listen for changes
+                sourceField.addEventListener('change', () => {
+                    checkConditional(container, sourceField, showValue);
+                });
+            }
+        });
+    }
+
+    function checkConditional(container, sourceField, showValue) {
+        let fieldValue = sourceField.value;
+        if (sourceField.type === 'checkbox') {
+            fieldValue = sourceField.checked ? 'yes' : 'no';
+        }
+
+        if (fieldValue === showValue) {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    // File drag and drop
+    function initFileDragDrop() {
+        document.querySelectorAll('.file-upload-wrapper').forEach(wrapper => {
+            wrapper.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                wrapper.classList.add('dragover');
+            });
+
+            wrapper.addEventListener('dragleave', () => {
+                wrapper.classList.remove('dragover');
+            });
+
+            wrapper.addEventListener('drop', (e) => {
+                e.preventDefault();
+                wrapper.classList.remove('dragover');
+                const input = wrapper.nextElementSibling;
+                if (input && e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    }
+
+    // Field helper functions
+    function selectBoolean(btn, fieldId) {
+        const group = btn.parentElement;
+        group.querySelectorAll('.boolean-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById(`field_${fieldId}`).value = btn.dataset.value;
+    }
+
+    function selectRating(btn, fieldId) {
+        const group = btn.parentElement;
+        group.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById(`field_${fieldId}`).value = btn.dataset.value;
+    }
+
+    function updateRangeValue(input) {
+        const fieldId = input.id.replace('field_', '');
+        document.getElementById(`range_value_${fieldId}`).textContent = input.value;
+    }
+
+    function getLocation(fieldId) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.getElementById(`field_${fieldId}_lat`).value = position.coords.latitude.toFixed(6);
+                    document.getElementById(`field_${fieldId}_lng`).value = position.coords.longitude.toFixed(6);
+                },
+                (error) => {
+                    alert('Unable to get location: ' + error.message);
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by this browser.');
+        }
+    }
+
+    function showFileName(input) {
+        const fieldId = input.id.replace('field_', '');
+        const fileNameDiv = document.getElementById(`file_name_${fieldId}`);
+        if (input.files.length > 0) {
+            fileNameDiv.innerHTML = `<i class="fas fa-check-circle me-1"></i>${input.files[0].name}`;
+        }
+    }
+
+    function previewImage(input) {
+        const fieldId = input.id.replace('field_', '');
+        const previewDiv = document.getElementById(`image_preview_${fieldId}`);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewDiv.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-height: 150px;">`;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function scanBarcode(fieldId) {
+        // This would typically integrate with a barcode scanning library
+        alert('Barcode scanning requires a compatible device camera. Please enter the code manually or use a mobile device with KoboCollect.');
+    }
+
+    // Navigation functions
+    function navigatePage(direction) {
+        // Validate current page before moving forward
+        if (direction > 0 && !validateCurrentPage()) {
+            return;
+        }
+
+        const newPage = currentPage + direction;
+        if (newPage >= 0 && newPage < pages.length) {
+            goToPage(newPage);
+        }
+    }
+
+    function goToPage(pageIndex) {
+        if (pageIndex < 0 || pageIndex >= pages.length) return;
+
+        // Hide current page
+        document.querySelectorAll('.form-page').forEach(page => {
+            page.classList.remove('active');
+        });
+
+        // Show target page
+        currentPage = pageIndex;
+        const targetPage = document.getElementById(`page-${currentPage}`);
+        if (targetPage) {
+            targetPage.classList.add('active');
+        }
+
+        renderProgressSteps();
+        updateNavigation();
+        updatePageCounter();
+
+        // Scroll to top of form
+        document.querySelector('.form-wizard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateNavigation() {
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Show/hide prev button
+        prevBtn.style.display = currentPage > 0 ? 'inline-block' : 'none';
+
+        // Show next or submit button
+        if (currentPage === pages.length - 1) {
+            nextBtn.style.display = 'none';
+            submitBtn.style.display = 'inline-block';
+        } else {
+            nextBtn.style.display = 'inline-block';
+            submitBtn.style.display = 'none';
+        }
+    }
+
+    function updatePageCounter() {
+        const counter = document.getElementById('pageCounter');
+        if (pages.length > 1) {
+            counter.textContent = `Page ${currentPage + 1} of ${pages.length}`;
+            counter.style.display = 'block';
+        } else {
+            counter.style.display = 'none';
+        }
+    }
+
+    // Validation
+    function validateCurrentPage() {
+        const currentPageEl = document.getElementById(`page-${currentPage}`);
+        const requiredFields = currentPageEl.querySelectorAll('[required]');
+        let isValid = true;
+
+        requiredFields.forEach(field => {
+            // Skip hidden conditional fields
+            const container = field.closest('.form-field-container');
+            if (container && container.style.display === 'none') {
+                return;
+            }
+
+            if (!field.value || field.value.trim() === '') {
+                isValid = false;
+                field.classList.add('is-invalid');
+
+                // Add validation message if not present
+                if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    feedback.textContent = 'This field is required';
+                    field.parentNode.insertBefore(feedback, field.nextSibling);
+                }
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+
+        if (!isValid) {
+            // Focus first invalid field
+            const firstInvalid = currentPageEl.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+            }
+        }
+
+        return isValid;
+    }
+
+    function setupFormValidation() {
+        // Clear validation styling on input
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.addEventListener('input', () => {
+                field.classList.remove('is-invalid');
+            });
+        });
+
+        // Form submission
+        document.getElementById('wizardForm').addEventListener('submit', function(e) {
+            if (!validateCurrentPage()) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Show loading state
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            submitBtn.disabled = true;
+        });
+    }
+
+    // Update overall progress
+    function updateOverallProgress() {
+        const totalFields = formFields.filter(f => !['section', 'group', 'note'].includes(f.type)).length;
+        document.getElementById('totalFields').textContent = totalFields;
+
+        // Count filled fields
+        let filledCount = 0;
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            if (field.value && field.value.trim() !== '' && !field.id.includes('_lat') && !field.id.includes('_lng')) {
+                filledCount++;
+            }
+        });
+
+        document.getElementById('completedFields').textContent = filledCount;
+        const percentage = totalFields > 0 ? (filledCount / totalFields) * 100 : 0;
+        document.getElementById('overallProgress').style.width = `${percentage}%`;
+
+        // Update on input
+        document.addEventListener('input', updateOverallProgress);
+        document.addEventListener('change', updateOverallProgress);
+    }
+</script>
+{% endblock %}

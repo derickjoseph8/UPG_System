@@ -176,3 +176,86 @@ class ProgramBeneficiary(BaseModel):
 
     def __str__(self):
         return f"{self.household.name} in {self.program.name}"
+
+
+class ProgramFieldAssociate(BaseModel):
+    """Track Field Associates assigned to a program by PM"""
+
+    ASSIGNMENT_STATUS_CHOICES = [
+        ('pending', 'Pending Mentor Assignment'),
+        ('assigned', 'Mentors Assigned'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+    ]
+
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='field_associates')
+    field_associate = models.ForeignKey(User, on_delete=models.CASCADE, related_name='program_assignments')
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='fa_assignments_made')
+
+    status = models.CharField(max_length=20, choices=ASSIGNMENT_STATUS_CHOICES, default='pending')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    # Track if FA has been notified
+    notified = models.BooleanField(default=False)
+    notified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-assigned_at']
+        unique_together = ['program', 'field_associate']
+
+    def __str__(self):
+        return f"{self.field_associate.get_full_name()} - {self.program.name}"
+
+    @property
+    def mentor_count(self):
+        return self.mentor_assignments.count()
+
+
+class ProgramMentorAssignment(BaseModel):
+    """Track Mentors assigned to a program by Field Associates"""
+
+    program_fa = models.ForeignKey(ProgramFieldAssociate, on_delete=models.CASCADE, related_name='mentor_assignments')
+    mentor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='program_mentor_assignments')
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='mentor_assignments_made')
+
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-assigned_at']
+        unique_together = ['program_fa', 'mentor']
+
+    def __str__(self):
+        return f"{self.mentor.get_full_name()} under {self.program_fa.field_associate.get_full_name()} - {self.program_fa.program.name}"
+
+
+class ProgramNotification(BaseModel):
+    """Notifications for program-related activities"""
+
+    NOTIFICATION_TYPE_CHOICES = [
+        ('fa_assignment', 'Field Associate Assignment'),
+        ('mentor_request', 'Mentor Assignment Request'),
+        ('program_update', 'Program Update'),
+        ('reminder', 'Reminder'),
+    ]
+
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='program_notifications')
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='notifications')
+
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    # Action URL for the notification
+    action_url = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.recipient.get_full_name()}"

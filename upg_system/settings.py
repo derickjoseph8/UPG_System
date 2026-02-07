@@ -7,18 +7,26 @@ For local development and testing.
 
 from pathlib import Path
 import os
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-upg-system-dev-key-change-in-production-123456789'
+# Security settings - Use environment variables in production
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-upg-system-dev-key-change-in-production-123456789')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+
+# CSRF Trusted Origins - Required for Django 4+ for cross-origin requests
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost,http://127.0.0.1,http://54.87.33.103,https://54.87.33.103',
+    cast=Csv()
+)
 
 
 # Application definition
@@ -50,7 +58,9 @@ LOCAL_APPS = [
     'grants',
     'upg_grants',  # UPG-specific grant management
     'forms',  # Dynamic forms system
+    'enrollment',  # Enrollment and targeting system
     'settings_module',
+    've_reporting',  # Silent VE Data Hub API (no UI)
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -91,15 +101,15 @@ WSGI_APPLICATION = 'upg_system.wsgi.application'
 
 # Database Configuration
 
-# MySQL Configuration (Active)
+# MySQL Configuration (Active) - Use environment variables for credentials
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'upg_management_system',
-        'USER': 'root',
-        'PASSWORD': '',  # XAMPP default (no password)
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': config('DB_NAME', default='upg_management_system'),
+        'USER': config('DB_USER', default='root'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
@@ -188,13 +198,32 @@ TWILIO_PHONE_NUMBER = '' # Set in production
 SMS_ENABLED = True
 SMS_BACKEND = 'core.sms.SMSService'  # Can be changed for testing
 
+# SSL Configuration - Set ENABLE_SSL=True in .env when SSL certificate is configured
+ENABLE_SSL = config('ENABLE_SSL', default=False, cast=bool)
+
 # Session Configuration
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_SECURE = ENABLE_SSL  # Only True when SSL is configured
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
-# Security Settings for Development
+# CSRF Configuration
+CSRF_COOKIE_SECURE = ENABLE_SSL  # Only True when SSL is configured
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token for AJAX requests
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Security Settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking
+
+# Production security settings (enabled when DEBUG=False and ENABLE_SSL=True)
+if not DEBUG and ENABLE_SSL:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # UPG System Specific Settings
 UPG_SYSTEM_VERSION = '1.0.0'
@@ -219,3 +248,69 @@ ITEMS_PER_PAGE = 25
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+
+# ==================== KoboToolbox Integration ====================
+
+# API Configuration - Set KOBO_API_TOKEN in .env file
+KOBO_API_URL = config('KOBO_API_URL', default='https://kf.kobotoolbox.org/api/v2')
+KOBO_API_TOKEN = config('KOBO_API_TOKEN', default='')  # REQUIRED: Set in .env file
+KOBO_BASE_URL = config('KOBO_BASE_URL', default='https://kf.kobotoolbox.org')
+
+# Webhook Configuration
+KOBO_WEBHOOK_SECRET = config('KOBO_WEBHOOK_SECRET', default='')  # Optional for signature validation
+KOBO_WEBHOOK_ENABLED = True
+
+# Sync Settings
+KOBO_AUTO_SYNC_ON_ACTIVATION = True  # Auto-sync when form becomes Active
+KOBO_AUTO_SYNC_ON_ASSIGNMENT = True  # Auto-sync when form assigned
+KOBO_SYNC_TIMEOUT = 30  # seconds
+
+# Reference Data Settings
+KOBO_PUSH_REFERENCE_DATA = True  # Push households, villages, etc. for pulldata()
+KOBO_REFERENCE_DATA_UPDATE_INTERVAL = 86400  # seconds (24 hours)
+
+# Validation Settings
+KOBO_ALLOW_NEW_HOUSEHOLDS = True  # Allow creating new HH from Kobo submissions
+KOBO_VALIDATE_PHONE_NUMBERS = True  # Validate phone number format
+KOBO_VALIDATE_ID_NUMBERS = True  # Validate ID number format
+
+# Error Handling
+KOBO_RETRY_FAILED_SYNCS = True
+KOBO_MAX_RETRY_ATTEMPTS = 3
+KOBO_RETRY_DELAY = 300  # seconds (5 minutes)
+
+# Notifications
+KOBO_NOTIFY_ON_SYNC_FAILURE = True
+KOBO_NOTIFY_EMAILS = []  # Add M&E staff emails for sync failure notifications
+
+# ==================== End KoboToolbox Config ====================
+
+# ==================== VE Data Hub Reporting Configuration ====================
+# Silent API configuration for Village Enterprise reporting access
+# These settings are used by the ve_reporting app
+#
+# IMPORTANT: Each county deployment MUST set these in their .env file:
+#
+# For Taita Taveta County:
+#   VE_INSTANCE_ID=kenya-taita-taveta
+#   VE_INSTANCE_NAME=Taita Taveta County UPG MIS
+#   VE_REGION=Taita Taveta
+#
+# For Makueni County:
+#   VE_INSTANCE_ID=kenya-makueni
+#   VE_INSTANCE_NAME=Makueni County UPG MIS
+#   VE_REGION=Makueni
+#
+# For West Pokot County:
+#   VE_INSTANCE_ID=kenya-west-pokot
+#   VE_INSTANCE_NAME=West Pokot County UPG MIS
+#   VE_REGION=West Pokot
+
+VE_INSTANCE_ID = config('VE_INSTANCE_ID', default='kenya-county')
+VE_INSTANCE_NAME = config('VE_INSTANCE_NAME', default='Kenya County UPG MIS')
+VE_COUNTRY = config('VE_COUNTRY', default='Kenya')
+VE_REGION = config('VE_REGION', default='County')
+VE_CURRENCY = config('VE_CURRENCY', default='KES')
+VE_TIMEZONE = config('VE_TIMEZONE', default='Africa/Nairobi')
+
+# ==================== End VE Data Hub Config ====================

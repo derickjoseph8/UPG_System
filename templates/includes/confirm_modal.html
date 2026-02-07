@@ -1,0 +1,217 @@
+<!-- Confirmation Modal Component -->
+<!--
+Usage:
+1. Include this template: {% include 'includes/confirm_modal.html' %}
+2. Add data attributes to your delete/action buttons:
+   <button class="btn btn-danger btn-confirm"
+           data-confirm-title="Delete Household"
+           data-confirm-message="Are you sure you want to delete this household? This action cannot be undone."
+           data-confirm-url="/households/123/delete/"
+           data-confirm-method="POST">
+       Delete
+   </button>
+
+3. For AJAX actions:
+   <button class="btn btn-warning btn-confirm"
+           data-confirm-title="Deactivate User"
+           data-confirm-message="This will prevent the user from logging in."
+           data-confirm-action="deactivateUser"
+           data-confirm-id="123">
+       Deactivate
+   </button>
+
+   Then define: window.confirmActions = { deactivateUser: function(id) { ... } }
+-->
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="confirmModalLabel">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    <span class="confirm-title">Confirm Action</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="confirm-message mb-0">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger confirm-proceed">
+                    <i class="fas fa-check me-1"></i> Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Form (hidden, used for form submissions) -->
+<form id="confirmDeleteForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrfmiddlewaretoken" id="confirmFormCsrf" value="">
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+
+    const bsModal = new bootstrap.Modal(modal);
+    const confirmTitle = modal.querySelector('.confirm-title');
+    const confirmMessage = modal.querySelector('.confirm-message');
+    const proceedBtn = modal.querySelector('.confirm-proceed');
+    const deleteForm = document.getElementById('confirmDeleteForm');
+    const csrfInput = document.getElementById('confirmFormCsrf');
+
+    // Set CSRF token from cookie
+    function getCsrfToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Set the CSRF token in the form
+    if (csrfInput) {
+        csrfInput.value = getCsrfToken();
+    }
+
+    let currentAction = null;
+    let currentData = null;
+
+    // Listen for clicks on confirm buttons
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-confirm');
+        if (!btn) return;
+
+        e.preventDefault();
+
+        // Get confirmation details from data attributes
+        const title = btn.dataset.confirmTitle || 'Confirm Action';
+        const message = btn.dataset.confirmMessage || 'Are you sure you want to proceed?';
+        const url = btn.dataset.confirmUrl;
+        const method = btn.dataset.confirmMethod || 'POST';
+        const action = btn.dataset.confirmAction;
+        const id = btn.dataset.confirmId;
+        const variant = btn.dataset.confirmVariant || 'danger';
+
+        // Update modal content
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+
+        // Update button style based on variant
+        proceedBtn.className = 'btn btn-' + variant + ' confirm-proceed';
+
+        // Update icon based on action type
+        const icon = modal.querySelector('.modal-title i');
+        if (variant === 'danger') {
+            icon.className = 'fas fa-exclamation-triangle text-danger me-2';
+        } else if (variant === 'warning') {
+            icon.className = 'fas fa-exclamation-circle text-warning me-2';
+        } else {
+            icon.className = 'fas fa-question-circle text-primary me-2';
+        }
+
+        // Store action data
+        currentAction = { url, method, action, id };
+
+        // Show modal
+        bsModal.show();
+    });
+
+    // Handle confirm button click
+    proceedBtn.addEventListener('click', function() {
+        if (!currentAction) return;
+
+        // Disable button and show loading
+        proceedBtn.disabled = true;
+        proceedBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+
+        if (currentAction.url) {
+            // Form submission
+            if (currentAction.method === 'GET') {
+                window.location.href = currentAction.url;
+            } else {
+                deleteForm.action = currentAction.url;
+                deleteForm.method = currentAction.method;
+                deleteForm.submit();
+            }
+        } else if (currentAction.action && window.confirmActions && window.confirmActions[currentAction.action]) {
+            // Custom JS action
+            try {
+                const result = window.confirmActions[currentAction.action](currentAction.id);
+                if (result instanceof Promise) {
+                    result.then(function() {
+                        bsModal.hide();
+                        resetButton();
+                    }).catch(function(err) {
+                        showToast('Action failed: ' + err.message, 'error');
+                        resetButton();
+                    });
+                } else {
+                    bsModal.hide();
+                    resetButton();
+                }
+            } catch (err) {
+                showToast('Action failed: ' + err.message, 'error');
+                resetButton();
+            }
+        } else {
+            bsModal.hide();
+            resetButton();
+        }
+    });
+
+    function resetButton() {
+        proceedBtn.disabled = false;
+        proceedBtn.innerHTML = '<i class="fas fa-check me-1"></i> Confirm';
+    }
+
+    // Reset on modal close
+    modal.addEventListener('hidden.bs.modal', function() {
+        currentAction = null;
+        resetButton();
+    });
+});
+
+// Global object for custom confirm actions
+window.confirmActions = window.confirmActions || {};
+</script>
+
+<style>
+#confirmModal .modal-content {
+    border-radius: 0.75rem;
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+#confirmModal .modal-header {
+    padding: 1.25rem 1.5rem 0.75rem;
+}
+
+#confirmModal .modal-body {
+    padding: 0.75rem 1.5rem;
+}
+
+#confirmModal .modal-footer {
+    padding: 0.75rem 1.5rem 1.25rem;
+}
+
+#confirmModal .confirm-message {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+</style>

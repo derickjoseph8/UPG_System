@@ -1,0 +1,617 @@
+<!-- Enhanced Data Table Component -->
+<!--
+Usage:
+{% include 'includes/data_table.html' with
+    table_id="households-table"
+    columns=columns
+    enable_search=True
+    enable_export=True
+    enable_pagination=True
+    page_sizes="10,25,50,100"
+%}
+
+Where columns is a list of dicts:
+[{'key': 'name', 'label': 'Name', 'sortable': True}, {'key': 'status', 'label': 'Status', 'sortable': True}]
+-->
+
+<div class="data-table-wrapper" id="{{ table_id|default:'data-table' }}-wrapper">
+    <!-- Table Controls -->
+    <div class="table-controls d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <!-- Left Controls: Search & Filters -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            {% if enable_search %}
+            <div class="input-group input-group-sm" style="width: 250px;">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 table-search"
+                       placeholder="Search..."
+                       data-table="{{ table_id|default:'data-table' }}">
+                <button class="btn btn-outline-secondary clear-search" type="button" title="Clear search">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {% endif %}
+
+            {% if enable_filter %}
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#{{ table_id|default:'data-table' }}-filters">
+                <i class="fas fa-filter me-1"></i> Filters
+                <span class="badge bg-primary filter-count d-none">0</span>
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Right Controls: Export & Display Options -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            {% if enable_column_toggle %}
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <i class="fas fa-columns me-1"></i> Columns
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end column-toggle-menu"
+                    data-table="{{ table_id|default:'data-table' }}">
+                    {% for col in columns %}
+                    <li>
+                        <label class="dropdown-item">
+                            <input type="checkbox" class="form-check-input me-2 column-toggle"
+                                   data-column="{{ forloop.counter0 }}" checked>
+                            {{ col.label }}
+                        </label>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if enable_export %}
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown">
+                    <i class="fas fa-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item export-btn" href="#" data-format="csv"
+                           data-table="{{ table_id|default:'data-table' }}">
+                            <i class="fas fa-file-csv me-2 text-success"></i> CSV
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item export-btn" href="#" data-format="excel"
+                           data-table="{{ table_id|default:'data-table' }}">
+                            <i class="fas fa-file-excel me-2 text-success"></i> Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item export-btn" href="#" data-format="pdf"
+                           data-table="{{ table_id|default:'data-table' }}">
+                            <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item export-btn" href="#" data-format="print"
+                           data-table="{{ table_id|default:'data-table' }}">
+                            <i class="fas fa-print me-2"></i> Print
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if enable_bulk_actions %}
+            <div class="btn-group bulk-actions d-none">
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown">
+                    <i class="fas fa-tasks me-1"></i>
+                    Bulk Actions (<span class="selected-count">0</span>)
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% block bulk_action_items %}
+                    <li>
+                        <a class="dropdown-item bulk-action" href="#" data-action="delete">
+                            <i class="fas fa-trash me-2 text-danger"></i> Delete Selected
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item bulk-action" href="#" data-action="export">
+                            <i class="fas fa-download me-2"></i> Export Selected
+                        </a>
+                    </li>
+                    {% endblock %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Collapsible Filters Panel -->
+    {% if enable_filter %}
+    <div class="collapse mb-3" id="{{ table_id|default:'data-table' }}-filters">
+        <div class="card card-body bg-light">
+            <div class="row g-3">
+                {% block filter_fields %}
+                <!-- Override this block to add filter fields -->
+                <div class="col-md-3">
+                    <label class="form-label small">Status</label>
+                    <select class="form-select form-select-sm table-filter" data-column="status">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                {% endblock %}
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-sm btn-primary apply-filters">
+                    <i class="fas fa-check me-1"></i> Apply Filters
+                </button>
+                <button class="btn btn-sm btn-outline-secondary clear-filters">
+                    <i class="fas fa-times me-1"></i> Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Table Container -->
+    <div class="table-responsive">
+        <table class="table table-hover table-striped enhanced-table" id="{{ table_id|default:'data-table' }}">
+            <thead class="table-light sticky-top">
+                <tr>
+                    {% if enable_bulk_actions %}
+                    <th style="width: 40px;">
+                        <input type="checkbox" class="form-check-input select-all" title="Select All">
+                    </th>
+                    {% endif %}
+                    {% for col in columns %}
+                    <th {% if col.sortable %}class="sortable" data-column="{{ col.key }}" data-sort="none"{% endif %}
+                        {% if col.width %}style="width: {{ col.width }};"{% endif %}>
+                        {{ col.label }}
+                        {% if col.sortable %}
+                        <span class="sort-icon ms-1">
+                            <i class="fas fa-sort text-muted"></i>
+                        </span>
+                        {% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% block table_body %}
+                <!-- Override this block with actual table rows -->
+                <tr>
+                    <td colspan="{{ columns|length }}" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No data available
+                    </td>
+                </tr>
+                {% endblock %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- No Results Message (hidden by default) -->
+    <div class="no-results text-center py-4 d-none">
+        <i class="fas fa-search fa-2x text-muted mb-2"></i>
+        <p class="text-muted mb-0">No matching records found</p>
+        <button class="btn btn-sm btn-link clear-search-btn">Clear search</button>
+    </div>
+
+    <!-- Pagination -->
+    {% if enable_pagination %}
+    <div class="table-pagination d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">Show</span>
+            <select class="form-select form-select-sm page-size-select" style="width: auto;">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="text-muted small">entries</span>
+        </div>
+
+        <div class="pagination-info text-muted small">
+            Showing <span class="start-entry">1</span> to <span class="end-entry">10</span>
+            of <span class="total-entries">0</span> entries
+        </div>
+
+        <nav aria-label="Table pagination">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item disabled prev-page">
+                    <a class="page-link" href="#" tabindex="-1">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                <li class="page-item active">
+                    <a class="page-link" href="#">1</a>
+                </li>
+                <li class="page-item next-page">
+                    <a class="page-link" href="#">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.data-table-wrapper {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.enhanced-table {
+    margin-bottom: 0;
+}
+
+.enhanced-table thead th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.enhanced-table thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.enhanced-table thead th.sortable:hover {
+    background-color: #e9ecef;
+}
+
+.enhanced-table thead th.sortable[data-sort="asc"] .sort-icon i::before {
+    content: "\f0de";
+}
+
+.enhanced-table thead th.sortable[data-sort="desc"] .sort-icon i::before {
+    content: "\f0dd";
+}
+
+.enhanced-table tbody tr {
+    transition: background-color 0.15s ease-in-out;
+}
+
+.enhanced-table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05) !important;
+}
+
+.enhanced-table tbody tr.selected {
+    background-color: rgba(0, 123, 255, 0.1) !important;
+}
+
+.enhanced-table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+/* Search input styling */
+.table-search:focus {
+    box-shadow: none;
+    border-color: #80bdff;
+}
+
+.clear-search {
+    border-left: 0;
+}
+
+/* Column toggle dropdown */
+.column-toggle-menu {
+    min-width: 200px;
+    padding: 0.5rem 0;
+}
+
+.column-toggle-menu .dropdown-item {
+    cursor: pointer;
+    padding: 0.375rem 1rem;
+}
+
+.column-toggle-menu .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Filter badge */
+.filter-count:not(.d-none) {
+    margin-left: 0.25rem;
+}
+
+/* Sticky header */
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.enhanced-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .table-controls {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .table-controls > div {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-controls .input-group {
+        width: 100% !important;
+    }
+
+    .table-pagination {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .table-pagination > * {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Loading state */
+.data-table-wrapper.loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.data-table-wrapper.loading::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 101;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize enhanced tables
+    document.querySelectorAll('.data-table-wrapper').forEach(function(wrapper) {
+        const tableId = wrapper.id.replace('-wrapper', '');
+        const table = document.getElementById(tableId);
+        if (!table) return;
+
+        // Search functionality
+        const searchInput = wrapper.querySelector('.table-search');
+        const clearSearchBtn = wrapper.querySelector('.clear-search');
+        const noResults = wrapper.querySelector('.no-results');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const rows = table.querySelectorAll('tbody tr');
+                let visibleCount = 0;
+
+                rows.forEach(function(row) {
+                    const text = row.textContent.toLowerCase();
+                    const match = text.includes(searchTerm);
+                    row.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                });
+
+                // Show/hide no results message
+                if (noResults) {
+                    noResults.classList.toggle('d-none', visibleCount > 0);
+                    table.classList.toggle('d-none', visibleCount === 0);
+                }
+            });
+
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', function() {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                });
+            }
+        }
+
+        // Sortable columns
+        wrapper.querySelectorAll('th.sortable').forEach(function(th) {
+            th.addEventListener('click', function() {
+                const column = this.dataset.column;
+                const currentSort = this.dataset.sort;
+                const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+
+                // Reset other column sorts
+                wrapper.querySelectorAll('th.sortable').forEach(function(otherTh) {
+                    if (otherTh !== th) {
+                        otherTh.dataset.sort = 'none';
+                        otherTh.querySelector('.sort-icon i').className = 'fas fa-sort text-muted';
+                    }
+                });
+
+                // Update this column sort
+                this.dataset.sort = newSort;
+                const icon = this.querySelector('.sort-icon i');
+                icon.className = newSort === 'asc' ? 'fas fa-sort-up text-primary' : 'fas fa-sort-down text-primary';
+
+                // Sort the table
+                sortTable(table, this.cellIndex, newSort);
+            });
+        });
+
+        // Select all checkbox
+        const selectAll = wrapper.querySelector('.select-all');
+        const bulkActions = wrapper.querySelector('.bulk-actions');
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                const checkboxes = table.querySelectorAll('tbody .row-select');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = selectAll.checked;
+                    cb.closest('tr').classList.toggle('selected', selectAll.checked);
+                });
+                updateBulkActions(wrapper);
+            });
+
+            table.addEventListener('change', function(e) {
+                if (e.target.classList.contains('row-select')) {
+                    e.target.closest('tr').classList.toggle('selected', e.target.checked);
+                    updateBulkActions(wrapper);
+                }
+            });
+        }
+
+        // Column toggle
+        wrapper.querySelectorAll('.column-toggle').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                const colIndex = parseInt(this.dataset.column);
+                const display = this.checked ? '' : 'none';
+                table.querySelectorAll('tr').forEach(function(row) {
+                    const cells = row.querySelectorAll('th, td');
+                    if (cells[colIndex]) {
+                        cells[colIndex].style.display = display;
+                    }
+                });
+            });
+        });
+
+        // Export functionality
+        wrapper.querySelectorAll('.export-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const format = this.dataset.format;
+                exportTable(table, format);
+            });
+        });
+    });
+
+    // Helper: Sort table
+    function sortTable(table, columnIndex, direction) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        rows.sort(function(a, b) {
+            const aVal = a.cells[columnIndex]?.textContent.trim() || '';
+            const bVal = b.cells[columnIndex]?.textContent.trim() || '';
+
+            // Try numeric sort first
+            const aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
+            const bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
+
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return direction === 'asc' ? aNum - bNum : bNum - aNum;
+            }
+
+            // Fall back to string sort
+            return direction === 'asc'
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        });
+
+        rows.forEach(function(row) {
+            tbody.appendChild(row);
+        });
+    }
+
+    // Helper: Update bulk actions visibility
+    function updateBulkActions(wrapper) {
+        const bulkActions = wrapper.querySelector('.bulk-actions');
+        if (!bulkActions) return;
+
+        const selected = wrapper.querySelectorAll('tbody .row-select:checked');
+        bulkActions.classList.toggle('d-none', selected.length === 0);
+        wrapper.querySelector('.selected-count').textContent = selected.length;
+    }
+
+    // Helper: Export table
+    function exportTable(table, format) {
+        const rows = table.querySelectorAll('tr:not([style*="display: none"])');
+        let data = [];
+
+        rows.forEach(function(row) {
+            const rowData = [];
+            row.querySelectorAll('th, td').forEach(function(cell) {
+                // Skip checkbox columns
+                if (!cell.querySelector('input[type="checkbox"]')) {
+                    rowData.push(cell.textContent.trim());
+                }
+            });
+            if (rowData.length > 0) {
+                data.push(rowData);
+            }
+        });
+
+        switch(format) {
+            case 'csv':
+                downloadCSV(data, 'export.csv');
+                break;
+            case 'excel':
+                // For Excel, we'll create a CSV that Excel can open
+                downloadCSV(data, 'export.xlsx');
+                showToast('Excel export created. Note: For full Excel features, use the server-side export.', 'info');
+                break;
+            case 'pdf':
+                showToast('PDF export requires server-side generation. Please use the Reports module.', 'info');
+                break;
+            case 'print':
+                printTable(table);
+                break;
+        }
+    }
+
+    // Helper: Download CSV
+    function downloadCSV(data, filename) {
+        const csv = data.map(row => row.map(cell => '"' + cell.replace(/"/g, '""') + '"').join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        showToast('Export downloaded successfully', 'success');
+    }
+
+    // Helper: Print table
+    function printTable(table) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Print</title>');
+        printWindow.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">');
+        printWindow.document.write('<style>body { padding: 20px; } table { width: 100%; } @media print { .no-print { display: none; } }</style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write('<h4 class="mb-3">UPG System Export</h4>');
+        printWindow.document.write(table.outerHTML);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(function() {
+            printWindow.print();
+        }, 500);
+    }
+});
+</script>

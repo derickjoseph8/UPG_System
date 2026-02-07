@@ -53,6 +53,9 @@ class HouseholdGrantApplication(BaseModel):
                                     help_text="User who submitted the application")
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='household_grant_applications', null=True, blank=True,
                                 help_text="Optional - for program-specific funding")
+    grant_program = models.ForeignKey('GrantProgram', on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='applications',
+                                      help_text="Grant program this application was submitted under")
 
     # Grant details
     grant_type = models.CharField(max_length=30, choices=GRANT_TYPE_CHOICES)
@@ -153,7 +156,7 @@ class HouseholdGrantApplication(BaseModel):
 
     def can_be_approved_by(self, user):
         """Check if user has permission to approve this application"""
-        return user.role in ['program_manager', 'county_director', 'executive']
+        return user.role in ['program_manager', 'county_director', 'executive', 'ict_admin']
 
     @property
     def is_pending_review(self):
@@ -554,6 +557,98 @@ class PRGrant(BaseModel):
         """Check if eligible for PR grant"""
         eligible, _ = self.check_eligibility()
         return eligible
+
+
+ASSIGNMENT_STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('declined', 'Declined'),
+]
+
+
+class GrantProgram(BaseModel):
+    """
+    Grant programs created by PM that can be assigned to FAs and Mentors
+    """
+    GRANT_PROGRAM_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('closed', 'Closed'),
+        ('archived', 'Archived'),
+    ]
+
+    name = models.CharField(max_length=200, help_text="Name of the grant program")
+    description = models.TextField(help_text="Description and eligibility criteria")
+    grant_type = models.CharField(max_length=30, choices=HouseholdGrantApplication.GRANT_TYPE_CHOICES)
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='grant_programs', null=True, blank=True)
+
+    # Budget
+    total_budget = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    max_amount_per_beneficiary = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('15000.00'))
+    min_amount_per_beneficiary = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('5000.00'))
+
+    # Dates
+    application_start_date = models.DateField(null=True, blank=True)
+    application_end_date = models.DateField(null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=GRANT_PROGRAM_STATUS_CHOICES, default='draft')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_grant_programs')
+
+    class Meta:
+        verbose_name = "Grant Program"
+        verbose_name_plural = "Grant Programs"
+        ordering = ['-created_at']
+        db_table = 'upg_grant_programs'
+
+    def __str__(self):
+        return f"{self.name} - {self.get_grant_type_display()}"
+
+
+class GrantFieldAssociate(BaseModel):
+    """
+    Field Associate assignments to grant programs
+    PM assigns FAs to manage grant distribution
+    """
+    grant_program = models.ForeignKey(GrantProgram, on_delete=models.CASCADE, related_name='fa_assignments')
+    field_associate = models.ForeignKey(User, on_delete=models.CASCADE, related_name='grant_fa_assignments',
+                                        limit_choices_to={'role': 'field_associate'})
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='grant_fa_assignments_made')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=ASSIGNMENT_STATUS_CHOICES, default='pending')
+    notified = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Grant Field Associate Assignment"
+        verbose_name_plural = "Grant Field Associate Assignments"
+        unique_together = ['grant_program', 'field_associate']
+        db_table = 'upg_grant_field_associates'
+
+    def __str__(self):
+        return f"{self.grant_program.name} - FA: {self.field_associate.get_full_name()}"
+
+
+class GrantMentorAssignment(BaseModel):
+    """
+    Mentor assignments to grant programs through FA
+    FA assigns mentors from their team
+    """
+    grant_fa = models.ForeignKey(GrantFieldAssociate, on_delete=models.CASCADE, related_name='mentor_assignments')
+    mentor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='grant_mentor_assignments',
+                               limit_choices_to={'role': 'mentor'})
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='grant_mentor_assignments_made')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=ASSIGNMENT_STATUS_CHOICES, default='pending')
+    notified = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Grant Mentor Assignment"
+        verbose_name_plural = "Grant Mentor Assignments"
+        unique_together = ['grant_fa', 'mentor']
+        db_table = 'upg_grant_mentor_assignments'
+
+    def __str__(self):
+        return f"{self.grant_fa.grant_program.name} - Mentor: {self.mentor.get_full_name()}"
 
 
 class GrantDisbursement(BaseModel):

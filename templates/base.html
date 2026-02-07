@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}UPG Management System{% endblock %}</title>
 
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap 5.3.0 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6.4.0 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
     <style>
         .navbar-brand {
@@ -144,10 +144,28 @@
                         </a>
                     </li>
 
+                    {% if perms.is_view_only %}
+                    <!-- Executive/CEC Mobile Menu: Only Dashboard and Reports -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'reports:report_list' %}">
+                            <i class="fas fa-chart-bar"></i> Reports
+                        </a>
+                    </li>
+                    {% else %}
+                    <!-- Full Mobile Menu for Non-Executive Users -->
+
                     {% if perms.can_view_programs %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'programs:program_list' %}">
                             <i class="fas fa-project-diagram"></i> Programs
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if user.is_superuser or user.role == 'me_staff' or user.role == 'ict_admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'enrollment:dashboard' %}">
+                            <i class="fas fa-user-plus"></i> Enrollment
                         </a>
                     </li>
                     {% endif %}
@@ -179,9 +197,26 @@
                     {% if perms.can_view_surveys %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'surveys:survey_list' %}">
-                            <i class="fas fa-clipboard-list"></i> Surveys & Forms
+                            <i class="fas fa-poll"></i> Surveys
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'forms:dashboard' %}">
+                            <i class="fas fa-file-alt"></i> Dynamic Forms
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'forms:template_create' %}">
+                            <i class="fas fa-plus"></i> Create New Form
+                        </a>
+                    </li>
+                    {% if user.is_superuser or user.role == 'me_staff' or user.role == 'ict_admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'forms:kobo_webhook_logs' %}">
+                            <i class="fas fa-satellite-dish"></i> Kobo Webhook Logs
+                        </a>
+                    </li>
+                    {% endif %}
                     {% endif %}
 
                     {% if perms.can_view_training %}
@@ -193,10 +228,18 @@
                     {% endif %}
 
                     {% if perms.can_view_grants %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'grants:grants_dashboard' %}">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="grantsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-money-bill-wave"></i> Grants
                         </a>
+                        <ul class="dropdown-menu" aria-labelledby="grantsDropdown">
+                            <li><a class="dropdown-item" href="{% url 'grants:grants_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Grants Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{% url 'upg_grants:grant_program_list' %}"><i class="fas fa-hand-holding-usd me-2"></i>Grant Programs</a></li>
+                            <li><a class="dropdown-item" href="{% url 'upg_grants:application_list' %}"><i class="fas fa-file-invoice-dollar me-2"></i>Grant Applications</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'grants:sb_grant_applications' %}"><i class="fas fa-briefcase me-2"></i>SB Grants</a></li>
+                            <li><a class="dropdown-item" href="{% url 'grants:pr_grant_applications' %}"><i class="fas fa-award me-2"></i>PR Grants</a></li>
+                        </ul>
                     </li>
                     {% endif %}
 
@@ -208,12 +251,13 @@
                     </li>
                     {% endif %}
 
-                    {% if perms.can_view_settings %}
+                    {% if perms.can_manage_bm_cycles %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'settings:settings_dashboard' %}">
-                            <i class="fas fa-cog"></i> Settings
+                        <a class="nav-link" href="{% url 'core:bm_cycle_list' %}">
+                            <i class="fas fa-calendar-alt"></i> BM Cycles
                         </a>
                     </li>
+                    {% endif %}
                     {% if perms.can_import_esr %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'core:esr_import_list' %}">
@@ -221,16 +265,26 @@
                         </a>
                     </li>
                     {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:bm_cycle_list' %}">
-                            <i class="fas fa-calendar-alt"></i> BM Cycles
-                        </a>
-                    </li>
+                    {% if perms.can_view_settings %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'core:mentor_villages_list' %}">
                             <i class="fas fa-map-marked-alt"></i> Mentor Assignments
                         </a>
                     </li>
+                    {% if user.is_superuser or user.role == 'me_staff' or user.role == 'ict_admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'settings:kobo_settings' %}">
+                            <i class="fas fa-satellite-dish"></i> KoboToolbox Settings
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'settings:settings_dashboard' %}">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </li>
+                    {% endif %}
+
                     {% endif %}
                 </ul>
 
@@ -267,11 +321,35 @@
                             </a>
                         </li>
 
+                        {% if perms.is_view_only %}
+                        <!-- Executive/CEC View-Only Menu: Only Dashboard and Reports -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'reports:report_list' %}">
+                                <i class="fas fa-chart-bar"></i> Reports
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3">
+                                <i class="fas fa-lock me-1"></i> View-Only Access
+                            </small>
+                        </li>
+                        {% else %}
+                        <!-- Full Menu for Non-Executive Users -->
+
                         <!-- Programs -->
                         {% if perms.can_view_programs %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'programs:program_list' %}">
                                 <i class="fas fa-project-diagram"></i> Programs
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <!-- Enrollment -->
+                        {% if user.is_superuser or user.role == 'me_staff' or user.role == 'ict_admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'enrollment:dashboard' %}">
+                                <i class="fas fa-user-plus"></i> Enrollment
                             </a>
                         </li>
                         {% endif %}
@@ -308,10 +386,27 @@
 
                         <!-- Surveys & Forms -->
                         {% if perms.can_view_surveys %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'surveys:survey_list' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-clipboard-list"></i> Surveys & Forms
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'surveys:survey_list' %}">
+                                    <i class="fas fa-poll"></i> Surveys
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'forms:dashboard' %}">
+                                    <i class="fas fa-file-alt"></i> Dynamic Forms
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'forms:template_create' %}">
+                                    <i class="fas fa-plus"></i> Create New Form
+                                </a></li>
+                                {% if user.is_superuser or user.role == 'me_staff' or user.role == 'ict_admin' %}
+                                <li><a class="dropdown-item" href="{% url 'forms:kobo_webhook_logs' %}">
+                                    <i class="fas fa-satellite-dish"></i> Kobo Webhook Logs
+                                </a></li>
+                                {% endif %}
+                            </ul>
                         </li>
                         {% endif %}
 
@@ -326,10 +421,28 @@
 
                         <!-- Grants -->
                         {% if perms.can_view_grants %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'grants:grants_dashboard' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-money-bill-wave"></i> Grants
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'grants:grants_dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Grants Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'upg_grants:grant_program_list' %}">
+                                    <i class="fas fa-hand-holding-usd me-2"></i>Grant Programs
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'upg_grants:application_list' %}">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i>Grant Applications
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'grants:sb_grant_applications' %}">
+                                    <i class="fas fa-briefcase me-2"></i>SB Grants
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'grants:pr_grant_applications' %}">
+                                    <i class="fas fa-award me-2"></i>PR Grants
+                                </a></li>
+                            </ul>
                         </li>
                         {% endif %}
 
@@ -342,31 +455,49 @@
                         </li>
                         {% endif %}
 
-                        <!-- Settings -->
+                        <!-- BM Cycles -->
+                        {% if perms.can_manage_bm_cycles %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:bm_cycle_list' %}">
+                                <i class="fas fa-calendar-alt"></i> BM Cycles
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <!-- ESR Import -->
+                        {% if perms.can_import_esr %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:esr_import_list' %}">
+                                <i class="fas fa-file-import"></i> ESR Import
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <!-- Mentor Assignments -->
                         {% if perms.can_view_settings %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:mentor_villages_list' %}">
+                                <i class="fas fa-map-marked-alt"></i> Mentor Assignments
+                            </a>
+                        </li>
+
+                        <!-- KoboToolbox Settings - Only for M&E and System Admin -->
+                        {% if user.is_superuser or user.role == 'me_staff' or user.role == 'ict_admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'settings:kobo_settings' %}">
+                                <i class="fas fa-satellite-dish"></i> KoboToolbox Settings
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <!-- Settings - Last Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'settings:settings_dashboard' %}">
                                 <i class="fas fa-cog"></i> Settings
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'settings:settings_dashboard' %}">
-                                    <i class="fas fa-cog"></i> System Settings
-                                </a></li>
-                                {% if perms.can_import_esr %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'core:esr_import_list' %}">
-                                    <i class="fas fa-file-import"></i> ESR Import
-                                </a></li>
-                                {% endif %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'core:bm_cycle_list' %}">
-                                    <i class="fas fa-calendar-alt"></i> BM Cycles
-                                </a></li>
-                                <li><a class="dropdown-item" href="{% url 'core:mentor_villages_list' %}">
-                                    <i class="fas fa-map-marked-alt"></i> Mentor Assignments
-                                </a></li>
-                            </ul>
                         </li>
+                        {% endif %}
+
                         {% endif %}
                     </ul>
                 </div>
@@ -375,25 +506,23 @@
 
             <!-- Main content -->
             <main role="main" class="{% if user.is_authenticated %}col-md-10 ml-sm-auto{% else %}col-12{% endif %} content-wrapper">
-                <!-- Messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+                <!-- Breadcrumb Navigation -->
+                {% block breadcrumb %}{% endblock %}
+
+                <!-- Toast Notifications (replacing alert-based messages) -->
+                {% include 'includes/toast.html' %}
 
                 {% block content %}{% endblock %}
             </main>
         </div>
     </div>
 
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery 3.7.0 -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
+    <!-- Bootstrap 5.3.0 JS (Standardized) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js 4.4.1 for Dashboard Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- CSRF Token Setup for AJAX -->
     <script>

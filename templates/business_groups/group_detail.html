@@ -58,13 +58,13 @@
         <!-- Group Members -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="fas fa-users"></i> Group Members ({{ group.members.count }})</h5>
+                <h5><i class="fas fa-users"></i> Active Members ({{ active_member_count }})</h5>
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                     <i class="fas fa-plus"></i> Add Member
                 </button>
             </div>
             <div class="card-body">
-                {% if group.members.exists %}
+                {% if active_members %}
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
@@ -73,12 +73,11 @@
                                 <th>Village</th>
                                 <th>Role</th>
                                 <th>Joined Date</th>
-                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for member in group.members.all %}
+                            {% for member in active_members %}
                             <tr>
                                 <td>
                                     <strong>{{ member.household.name }}</strong><br>
@@ -92,18 +91,13 @@
                                 </td>
                                 <td>{{ member.joined_date|date:"M d, Y" }}</td>
                                 <td>
-                                    <span class="badge bg-{% if member.is_active %}success{% else %}danger{% endif %}">
-                                        {% if member.is_active %}Active{% else %}Inactive{% endif %}
-                                    </span>
-                                </td>
-                                <td>
                                     <div class="btn-group btn-group-sm">
                                         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#updateRoleModal{{ member.id }}">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#removeMemberModal{{ member.id }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <a href="{% url 'business_groups:remove_member' group.pk member.id %}" class="btn btn-outline-danger btn-sm" title="Remove Member">
+                                            <i class="fas fa-user-minus"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -137,27 +131,6 @@
                                 </div>
                             </div>
 
-                            <!-- Remove Member Modal -->
-                            <div class="modal fade" id="removeMemberModal{{ member.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Remove Member</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to remove <strong>{{ member.household.name }}</strong> from this business group?</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form method="post" action="{% url 'business_groups:remove_member' group.pk member.id %}" style="display: inline;">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-danger">Remove Member</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -165,10 +138,38 @@
                 {% else %}
                 <div class="text-center py-4">
                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No members added to this group yet.</p>
+                    <p class="text-muted">No active members in this group.</p>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                         <i class="fas fa-plus"></i> Add First Member
                     </button>
+                </div>
+                {% endif %}
+
+                <!-- Inactive/Removed Members -->
+                {% if inactive_members %}
+                <hr>
+                <h6 class="text-muted mt-4"><i class="fas fa-user-slash"></i> Removed Members ({{ inactive_members.count }})</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-secondary">
+                        <thead>
+                            <tr>
+                                <th>Household</th>
+                                <th>Village</th>
+                                <th>Role</th>
+                                <th>Joined Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in inactive_members %}
+                            <tr class="text-muted">
+                                <td>{{ member.household.name }}</td>
+                                <td>{{ member.household.village.name|default:"No Village" }}</td>
+                                <td>{{ member.get_role_display }}</td>
+                                <td>{{ member.joined_date|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
                 {% endif %}
             </div>
@@ -213,9 +214,15 @@
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
-                    <span>Members:</span>
-                    <strong>{{ group.members.count|default:0 }}</strong>
+                    <span>Active Members:</span>
+                    <strong>{{ active_member_count|default:0 }}</strong>
                 </div>
+                {% if inactive_members %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Removed Members:</span>
+                    <strong class="text-muted">{{ inactive_members.count }}</strong>
+                </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Surveys Completed:</span>
                     <strong>{{ group.surveys.count|default:0 }}</strong>

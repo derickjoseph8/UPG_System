@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_list' %}">Savings Groups</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:savings_group_detail' savings_group.pk %}">{{ savings_group.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:loan_list' savings_group.pk %}">Loans</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'savings_groups:loan_detail' savings_group.pk loan.pk %}">{{ loan.member.household }}</a></li>
+            <li class="breadcrumb-item active">Record Repayment</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-coins"></i> Record Loan Repayment</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Loan Summary -->
+                    <div class="alert alert-info mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Member:</strong> {{ loan.member.household }}</p>
+                                <p class="mb-1"><strong>Loan Amount:</strong> KES {{ loan.loan_amount|floatformat:2 }}</p>
+                                <p class="mb-1"><strong>Total Due:</strong> KES {{ loan.total_due|floatformat:2 }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Amount Repaid:</strong> <span class="text-success">KES {{ loan.amount_repaid|floatformat:2 }}</span></p>
+                                <p class="mb-1"><strong>Remaining Balance:</strong> <span class="text-danger">KES {{ loan.balance|floatformat:2 }}</span></p>
+                                <p class="mb-1"><strong>Progress:</strong> {{ loan.repayment_percentage }}%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="amount" class="form-label">Repayment Amount (KES) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="1" max="{{ loan.balance }}" required>
+                                    <small class="form-text text-muted">Remaining: KES {{ loan.balance|floatformat:2 }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="repayment_date" class="form-label">Repayment Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="repayment_date" name="repayment_date" value="{% now 'Y-m-d' %}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Any additional notes..."></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Record Repayment
+                            </button>
+                            <a href="{% url 'savings_groups:loan_detail' savings_group.pk loan.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

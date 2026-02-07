@@ -46,15 +46,52 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="program" class="form-label">Program <small class="text-muted">(Optional - for program-specific funding)</small></label>
-                        <select class="form-select" id="program" name="program">
-                            <option value="">-- Not program-specific --</option>
-                            {% for prog in programs %}
-                            <option value="{{ prog.id }}">{{ prog.name }} - {{ prog.cycle }}</option>
-                            {% endfor %}
-                        </select>
+                    {% if selected_grant_program %}
+                    <!-- Pre-selected Grant Program Banner -->
+                    <div class="alert alert-success mb-3">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <strong>Applying for:</strong> {{ selected_grant_program.name }}
+                        <span class="badge bg-primary ms-2">{{ selected_grant_program.get_grant_type_display }}</span>
+                        <input type="hidden" name="grant_program" value="{{ selected_grant_program.id }}">
                     </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <label class="form-label">Funding Source <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100 mb-2" role="group">
+                            <input type="radio" class="btn-check" name="funding_source" id="funding_program" value="program" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="funding_program">
+                                <i class="fas fa-project-diagram"></i> Program
+                            </label>
+                            <input type="radio" class="btn-check" name="funding_source" id="funding_grant" value="grant_program" autocomplete="off">
+                            <label class="btn btn-outline-success" for="funding_grant">
+                                <i class="fas fa-hand-holding-usd"></i> Grant Program
+                            </label>
+                        </div>
+
+                        <!-- Program Selection (shown by default) -->
+                        <div id="program-selection">
+                            <select class="form-select" id="program" name="program">
+                                <option value="">-- Select Program --</option>
+                                {% for prog in programs %}
+                                <option value="{{ prog.id }}">{{ prog.name }} - {{ prog.cycle }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Grant Program Selection (hidden by default) -->
+                        <div id="grant-program-selection" style="display: none;">
+                            <select class="form-select" id="grant_program" name="grant_program">
+                                <option value="">-- Select Grant Program --</option>
+                                {% for gp in grant_programs %}
+                                <option value="{{ gp.id }}">
+                                    {{ gp.name }} ({{ gp.get_grant_type_display }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Select an active grant program to apply from</small>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <div class="mb-3">
                         <label for="purpose" class="form-label">Purpose and Justification <span class="text-danger">*</span></label>
@@ -147,6 +184,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const budgetTotalSpan = document.querySelector('#budget-total');
     const requestedAmountInput = document.querySelector('#requested_amount');
     const budgetValidation = document.querySelector('#budget-validation');
+
+    // Toggle between program and grant program selection
+    const fundingSourceRadios = document.querySelectorAll('input[name="funding_source"]');
+    const programSelection = document.getElementById('program-selection');
+    const grantProgramSelection = document.getElementById('grant-program-selection');
+    const programSelect = document.getElementById('program');
+    const grantProgramSelect = document.getElementById('grant_program');
+
+    fundingSourceRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'program') {
+                programSelection.style.display = 'block';
+                grantProgramSelection.style.display = 'none';
+                grantProgramSelect.value = '';
+            } else {
+                programSelection.style.display = 'none';
+                grantProgramSelection.style.display = 'block';
+                programSelect.value = '';
+            }
+        });
+    });
+
+    // Check if grant_program was pre-selected
+    if (grantProgramSelect && grantProgramSelect.value) {
+        document.getElementById('funding_grant').checked = true;
+        programSelection.style.display = 'none';
+        grantProgramSelection.style.display = 'block';
+    }
 
     // Function to calculate budget total
     function calculateBudgetTotal() {

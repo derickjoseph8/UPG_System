@@ -216,6 +216,170 @@ class UserAlertDismissal(models.Model):
         unique_together = ['user', 'alert']
 
 
+class CustomRole(models.Model):
+    """
+    Custom roles with configurable permissions and geographical restrictions.
+    ICT Admins can create custom roles with specific access levels and village assignments.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    # Permission configuration stored as JSON
+    # Structure: {"module_name": "access_level"} where access_level is 'full', 'read', or 'none'
+    permissions = models.JSONField(default=dict, help_text="Module permissions configuration")
+
+    # Dashboard type for this role
+    DASHBOARD_CHOICES = [
+        ('admin', 'Admin Dashboard'),
+        ('executive', 'Executive Dashboard'),
+        ('mentor', 'Mentor Dashboard'),
+        ('me', 'M&E Dashboard'),
+        ('field_associate', 'Field Associate Dashboard'),
+        ('general', 'General Dashboard'),
+    ]
+    dashboard_type = models.CharField(max_length=20, choices=DASHBOARD_CHOICES, default='general')
+
+    # Geographical restrictions
+    GEOGRAPHIC_SCOPE_CHOICES = [
+        ('all', 'All Villages (No Restriction)'),
+        ('county', 'Specific County'),
+        ('subcounty', 'Specific Sub-County'),
+        ('villages', 'Specific Villages'),
+    ]
+    geographic_scope = models.CharField(
+        max_length=20,
+        choices=GEOGRAPHIC_SCOPE_CHOICES,
+        default='all',
+        help_text="Define geographical access scope for this role"
+    )
+
+    # Specific geographic assignments (used when scope is not 'all')
+    # Note: We use the core.Village model
+    allowed_villages = models.ManyToManyField(
+        'core.Village',
+        blank=True,
+        related_name='custom_roles',
+        help_text="Villages this role can access (when scope is 'villages')"
+    )
+
+    # For subcounty scope - store subcounty names in JSON
+    allowed_subcounties = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of subcounty names this role can access"
+    )
+
+    # For county scope - store county name
+    allowed_county = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="County this role can access"
+    )
+
+    # Track creation and updates
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_custom_roles')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='updated_custom_roles')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Available modules and their descriptions
+    AVAILABLE_MODULES = {
+        'dashboard': 'Dashboard & Overview',
+        'programs': 'Programs Management',
+        'households': 'Households & Beneficiaries',
+        'business_groups': 'Business Groups',
+        'savings_groups': 'Savings Groups (BSG)',
+        'surveys': 'Surveys & Forms',
+        'training': 'Training & Mentoring',
+        'grants': 'Grants Management',
+        'reports': 'Reports & Analytics',
+        'settings': 'System Settings',
+        'users': 'User Management',
+        'audit_logs': 'Audit Logs',
+        'kobo': 'KoboToolbox Integration',
+    }
+
+    def __str__(self):
+        return self.name
+
+    def has_permission(self, module_name, permission_type='read'):
+        """
+        Check if this role has permission for a specific module.
+        permission_type: 'full', 'read', 'any'
+        """
+        module_permission = self.permissions.get(module_name, 'none')
+
+        if permission_type == 'full':
+            return module_permission == 'full'
+        elif permission_type == 'read':
+            return module_permission in ['full', 'read']
+        else:  # any
+            return module_permission in ['full', 'read']
+
+    def get_permission_display(self, module_name):
+        """Get human-readable permission level for a module"""
+        level = self.permissions.get(module_name, 'none')
+        return {
+            'full': 'Full Access',
+            'read': 'Read Only',
+            'none': 'No Access'
+        }.get(level, 'No Access')
+
+    def get_allowed_villages(self):
+        """
+        Get all villages this role can access based on geographic scope.
+        Returns a queryset of Village objects.
+        """
+        from core.models import Village
+
+        if self.geographic_scope == 'all':
+            return Village.objects.all()
+        elif self.geographic_scope == 'county' and self.allowed_county:
+            return Village.objects.filter(county=self.allowed_county)
+        elif self.geographic_scope == 'subcounty' and self.allowed_subcounties:
+            return Village.objects.filter(subcounty__in=self.allowed_subcounties)
+        elif self.geographic_scope == 'villages':
+            return self.allowed_villages.all()
+        return Village.objects.none()
+
+    def can_access_village(self, village):
+        """Check if this role can access a specific village"""
+        if self.geographic_scope == 'all':
+            return True
+        elif self.geographic_scope == 'county':
+            return village.county == self.allowed_county
+        elif self.geographic_scope == 'subcounty':
+            return village.subcounty in self.allowed_subcounties
+        elif self.geographic_scope == 'villages':
+            return village in self.allowed_villages.all()
+        return False
+
+    def get_geographic_summary(self):
+        """Get a human-readable summary of geographic restrictions"""
+        if self.geographic_scope == 'all':
+            return "All Villages"
+        elif self.geographic_scope == 'county':
+            return f"County: {self.allowed_county}"
+        elif self.geographic_scope == 'subcounty':
+            return f"Sub-Counties: {', '.join(self.allowed_subcounties)}"
+        elif self.geographic_scope == 'villages':
+            count = self.allowed_villages.count()
+            return f"{count} Village{'s' if count != 1 else ''}"
+        return "No Access"
+
+    @classmethod
+    def get_available_modules(cls):
+        """Return list of available modules for permission assignment"""
+        return cls.AVAILABLE_MODULES
+
+    class Meta:
+        db_table = 'upg_custom_roles'
+        ordering = ['name']
+        verbose_name = 'Custom Role'
+        verbose_name_plural = 'Custom Roles'
+
+
 class SystemBackup(models.Model):
     """
     Track system backups

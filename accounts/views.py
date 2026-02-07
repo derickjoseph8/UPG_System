@@ -10,6 +10,7 @@ from django.views.generic import CreateView
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from .models import User, PasswordResetToken
 from .forms import LoginForm, UserRegistrationForm
 
@@ -24,7 +25,14 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
+                # Security fix: Validate next URL to prevent open redirect attacks
                 next_url = request.GET.get('next', '/')
+                if not url_has_allowed_host_and_scheme(
+                    url=next_url,
+                    allowed_hosts={request.get_host()},
+                    require_https=request.is_secure()
+                ):
+                    next_url = '/'
                 return redirect(next_url)
             else:
                 messages.error(request, 'Invalid username or password')
@@ -44,8 +52,100 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    """User profile view"""
-    return render(request, 'accounts/profile.html', {'user': request.user})
+    """User profile view with village assignments for mentors and FAs"""
+    user = request.user
+    from accounts.models import UserProfile
+
+    # Ensure user has a profile
+    try:
+        profile = user.profile
+    except UserProfile.DoesNotExist:
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+
+    # Role info for template
+    role_info = {
+        'is_mentor': user.role == 'mentor',
+        'is_field_associate': user.role == 'field_associate',
+        'is_program_manager': user.role == 'program_manager',
+        'is_me_staff': user.role == 'me_staff',
+        'is_ict_admin': user.role == 'ict_admin',
+    }
+
+    # Village info for mentors and field associates
+    village_info = {
+        'has_village_assignments': False,
+        'assigned_villages_count': 0,
+        'assigned_villages': [],
+    }
+
+    if user.role == 'mentor':
+        # Mentors see their directly assigned villages
+        if profile:
+            villages = profile.assigned_villages.all().select_related('subcounty_obj')
+            village_info['has_village_assignments'] = villages.exists()
+            village_info['assigned_villages_count'] = villages.count()
+            village_info['assigned_villages'] = villages
+
+    elif user.role == 'field_associate':
+        # FAs see villages from their supervised mentors
+        from core.models import Village
+        supervised_mentors = User.objects.filter(
+            role='mentor',
+            is_active=True,
+            profile__supervisor=user
+        ).select_related('profile')
+
+        village_ids = []
+        for mentor in supervised_mentors:
+            if hasattr(mentor, 'profile') and mentor.profile:
+                mentor_villages = list(mentor.profile.assigned_villages.values_list('id', flat=True))
+                village_ids.extend(mentor_villages)
+        village_ids = list(set(village_ids))
+
+        if village_ids:
+            villages = Village.objects.filter(id__in=village_ids).select_related('subcounty_obj')
+            village_info['has_village_assignments'] = True
+            village_info['assigned_villages_count'] = villages.count()
+            village_info['assigned_villages'] = villages
+            village_info['supervised_mentors_count'] = supervised_mentors.count()
+
+    # Supervisor info for mentors
+    supervisor_info = None
+    if user.role == 'mentor' and profile and profile.supervisor:
+        supervisor_info = {
+            'name': profile.supervisor.get_full_name() or profile.supervisor.username,
+            'email': profile.supervisor.email,
+            'phone': profile.supervisor.phone_number if hasattr(profile.supervisor, 'phone_number') else '',
+        }
+
+    # Supervised mentors info for FAs
+    supervised_mentors_info = []
+    if user.role == 'field_associate':
+        supervised_mentors = User.objects.filter(
+            role='mentor',
+            is_active=True,
+            profile__supervisor=user
+        ).select_related('profile')
+        for mentor in supervised_mentors:
+            mentor_villages = []
+            if hasattr(mentor, 'profile') and mentor.profile:
+                mentor_villages = list(mentor.profile.assigned_villages.values_list('name', flat=True))
+            supervised_mentors_info.append({
+                'name': mentor.get_full_name() or mentor.username,
+                'email': mentor.email,
+                'villages': mentor_villages,
+            })
+
+    context = {
+        'user': user,
+        'profile': profile,
+        'role_info': role_info,
+        'village_info': village_info,
+        'supervisor_info': supervisor_info,
+        'supervised_mentors_info': supervised_mentors_info,
+    }
+
+    return render(request, 'accounts/profile.html', context)
 
 
 def forgot_password_view(request):

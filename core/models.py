@@ -274,3 +274,102 @@ class SMSLog(models.Model):
     class Meta:
         db_table = 'upg_sms_logs'
         ordering = ['-sent_at']
+
+
+class SystemSettings(models.Model):
+    """
+    System-wide configuration settings (singleton pattern)
+    Stores KoboToolbox API credentials and other system settings
+    """
+    # KoboToolbox Integration
+    kobo_api_url = models.URLField(
+        default='https://kf.kobotoolbox.org/api/v2',
+        help_text="KoboToolbox API URL"
+    )
+    kobo_api_token = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="KoboToolbox API Token (from Account Settings > Security)"
+    )
+    kobo_base_url = models.URLField(
+        default='https://kf.kobotoolbox.org',
+        help_text="KoboToolbox Base URL"
+    )
+    kobo_webhook_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional webhook secret for signature validation"
+    )
+    kobo_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable/disable KoboToolbox integration"
+    )
+
+    # SMS Integration (for future use)
+    sms_provider = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="SMS provider name"
+    )
+    sms_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="SMS provider API key"
+    )
+    sms_sender_id = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="SMS sender ID"
+    )
+
+    # General Settings
+    organization_name = models.CharField(
+        max_length=200,
+        default='Village Enterprise',
+        help_text="Organization name for reports"
+    )
+    timezone = models.CharField(
+        max_length=50,
+        default='Africa/Nairobi',
+        help_text="System timezone"
+    )
+
+    # Metadata
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'upg_system_settings'
+        verbose_name = 'System Settings'
+        verbose_name_plural = 'System Settings'
+
+    def __str__(self):
+        return "System Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @classmethod
+    def get_kobo_config(cls):
+        """Get KoboToolbox configuration as a dict"""
+        settings = cls.get_settings()
+        return {
+            'api_url': settings.kobo_api_url,
+            'api_token': settings.kobo_api_token,
+            'base_url': settings.kobo_base_url,
+            'webhook_secret': settings.kobo_webhook_secret,
+            'enabled': settings.kobo_enabled,
+        }

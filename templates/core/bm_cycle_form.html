@@ -38,11 +38,14 @@
                         <select class="form-select" id="business_mentor" name="business_mentor" required>
                             <option value="">Choose mentor...</option>
                             {% for mentor in mentors %}
-                            <option value="{{ mentor.id }}" {% if cycle and cycle.business_mentor_id == mentor.id %}selected{% endif %}>
+                            <option value="{{ mentor.id }}" {% if cycle and cycle.business_mentor_id == mentor.id %}selected{% elif current_mentor and current_mentor.id == mentor.id %}selected{% endif %}>
                                 {{ mentor.first_name }} {{ mentor.last_name }}
                             </option>
                             {% endfor %}
                         </select>
+                        {% if current_mentor %}
+                        <div class="form-text text-success"><i class="fas fa-check-circle"></i> Auto-selected based on your profile</div>
+                        {% endif %}
                     </div>
 
                     <div class="mb-3">
@@ -50,11 +53,14 @@
                         <select class="form-select" id="field_associate" name="field_associate" required>
                             <option value="">Choose field associate...</option>
                             {% for fa in field_associates %}
-                            <option value="{{ fa.get_full_name }}" {% if cycle and cycle.field_associate == fa.get_full_name %}selected{% endif %}>
+                            <option value="{{ fa.get_full_name }}" {% if cycle and cycle.field_associate == fa.get_full_name %}selected{% elif current_field_associate and current_field_associate == fa.get_full_name %}selected{% endif %}>
                                 {{ fa.get_full_name }} ({{ fa.email }})
                             </option>
                             {% endfor %}
                         </select>
+                        {% if current_field_associate %}
+                        <div class="form-text text-success"><i class="fas fa-check-circle"></i> Auto-selected based on your profile</div>
+                        {% endif %}
                     </div>
 
                     <div class="mb-3">

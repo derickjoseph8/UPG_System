@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-user-plus"></i> {{ page_title }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'programs:program_list' %}">Programs</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'programs:program_detail' program.pk %}">{{ program.name }}</a></li>
+                <li class="breadcrumb-item active">Enroll Households</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <a href="{% url 'programs:program_beneficiaries' program.pk %}" class="btn btn-outline-primary">
+            <i class="fas fa-users"></i> View Beneficiaries
+        </a>
+        <a href="{% url 'programs:program_detail' program.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Program
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Select Households to Enroll</h5>
+            </div>
+            <div class="card-body">
+                {% if available_households %}
+                <form method="post">
+                    {% csrf_token %}
+                    <p class="text-muted">Select households to enroll in this program. Already enrolled households are not shown.</p>
+
+                    <!-- Filter Controls -->
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">Filter by Village</label>
+                            <select class="form-select" id="village-filter">
+                                <option value="">All Villages</option>
+                                {% regroup available_households by village.name as village_options %}
+                                {% for v in village_options %}
+                                <option value="{{ v.grouper|lower }}">{{ v.grouper|default:"Unknown" }} ({{ v.list|length }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label small fw-bold">Search Households</label>
+                            <input type="text" class="form-control" id="household-search" placeholder="Search by name or phone...">
+                        </div>
+                    </div>
+
+                    <!-- Selection Controls -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="select_all_households" name="select_all_households">
+                            <label class="form-check-label fw-bold" for="select_all_households">
+                                Select All Visible (<span id="visible-count">{{ available_households|length }}</span>)
+                            </label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-selection">
+                                <i class="fas fa-times"></i> Clear Selection
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Households List -->
+                    <div id="household-checkboxes" class="border rounded p-3" style="max-height: 450px; overflow-y: auto;">
+                        {% regroup available_households by village.name as village_list %}
+                        {% for village in village_list %}
+                        <div class="village-group mb-3" data-village="{{ village.grouper|lower }}">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                <div class="fw-bold text-primary">
+                                    <i class="fas fa-map-marker-alt"></i> {{ village.grouper|default:"Unknown Village" }}
+                                    <span class="badge bg-secondary village-count">{{ village.list|length }}</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary select-village-btn" data-village="{{ village.grouper|lower }}">
+                                    <i class="fas fa-check-double"></i> Select All
+                                </button>
+                            </div>
+                            {% for household in village.list %}
+                            <div class="form-check household-item py-1" data-name="{{ household.name|lower }}" data-village="{{ village.grouper|lower }}" data-phone="{{ household.phone_number|default:''|lower }}">
+                                <input class="form-check-input household-checkbox" type="checkbox"
+                                       name="households[]" value="{{ household.id }}" id="hh-{{ household.id }}">
+                                <label class="form-check-label" for="hh-{{ household.id }}">
+                                    <strong>{{ household.name }}</strong>
+                                    {% if household.phone_number %}
+                                    <small class="text-muted ms-2"><i class="fas fa-phone"></i> {{ household.phone_number }}</small>
+                                    {% endif %}
+                                    {% if household.head_first_name %}
+                                    <small class="text-secondary ms-2">- {{ household.head_first_name }} {{ household.head_last_name }}</small>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Submit Section -->
+                    <div class="mt-3 p-3 bg-light rounded d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-bold text-success fs-5"><span id="selected-count">0</span></span>
+                            <span class="text-muted">household(s) selected</span>
+                        </div>
+                        <div>
+                            <a href="{% url 'programs:program_detail' program.pk %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-plus"></i> Enroll Selected
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users-slash text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="text-muted mt-3">No Available Households</h4>
+                    <p class="text-muted">
+                        {% if user_role == 'mentor' %}
+                        All households in your assigned villages are already enrolled in this program, or you have no villages assigned.
+                        {% else %}
+                        All households are already enrolled in this program or there are no households in your assigned areas.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'programs:program_beneficiaries' program.pk %}" class="btn btn-primary">
+                        <i class="fas fa-users"></i> View Current Beneficiaries
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Program Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Program Info</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>{{ program.name }}</strong></p>
+                <p class="text-muted small">{{ program.description|truncatewords:30 }}</p>
+                <hr>
+                <p class="mb-1"><strong>Target:</strong> {{ program.target_beneficiaries }} households</p>
+                <p class="mb-1"><strong>Current:</strong> {{ program.beneficiaries.count }} enrolled</p>
+                <p class="mb-0"><strong>Available:</strong> {{ available_households|length }} households</p>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-pie"></i> Available by Village</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% regroup available_households by village.name as village_stats %}
+                    {% for v in village_stats %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                        <small>{{ v.grouper|default:"Unknown" }}</small>
+                        <span class="badge bg-primary rounded-pill">{{ v.list|length }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0 ps-3 small">
+                    <li>Use village filter for quick selection</li>
+                    <li>Search by name or phone number</li>
+                    <li>Click "Select All" per village</li>
+                    <li>Use main "Select All" for all visible</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select_all_households');
+    const villageFilter = document.getElementById('village-filter');
+    const searchInput = document.getElementById('household-search');
+    const clearBtn = document.getElementById('clear-selection');
+
+    // Update counts
+    function updateCounts() {
+        const selectedCount = document.querySelectorAll('.household-checkbox:checked').length;
+        document.getElementById('selected-count').textContent = selectedCount;
+
+        const visibleItems = document.querySelectorAll('.household-item:not([style*="display: none"])');
+        document.getElementById('visible-count').textContent = visibleItems.length;
+    }
+
+    // Filter function
+    function applyFilters() {
+        const searchQuery = searchInput.value.toLowerCase();
+        const villageQuery = villageFilter.value.toLowerCase();
+
+        document.querySelectorAll('.household-item').forEach(function(item) {
+            const name = item.dataset.name || '';
+            const village = item.dataset.village || '';
+            const phone = item.dataset.phone || '';
+
+            const matchesSearch = !searchQuery || name.includes(searchQuery) || phone.includes(searchQuery);
+            const matchesVillage = !villageQuery || village === villageQuery;
+
+            item.style.display = (matchesSearch && matchesVillage) ? '' : 'none';
+        });
+
+        // Show/hide village groups
+        document.querySelectorAll('.village-group').forEach(function(group) {
+            const visibleItems = group.querySelectorAll('.household-item:not([style*="display: none"])');
+            group.style.display = visibleItems.length > 0 ? '' : 'none';
+        });
+
+        updateCounts();
+    }
+
+    // Village filter
+    villageFilter.addEventListener('change', applyFilters);
+
+    // Search filter
+    searchInput.addEventListener('input', applyFilters);
+
+    // Select All Visible
+    selectAll.addEventListener('change', function() {
+        document.querySelectorAll('.household-item:not([style*="display: none"]) .household-checkbox').forEach(function(cb) {
+            cb.checked = selectAll.checked;
+        });
+        updateCounts();
+    });
+
+    // Select All in Village
+    document.querySelectorAll('.select-village-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const village = this.dataset.village;
+            const group = document.querySelector('.village-group[data-village="' + village + '"]');
+            const checkboxes = group.querySelectorAll('.household-item:not([style*="display: none"]) .household-checkbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            this.innerHTML = allChecked ? '<i class="fas fa-check-double"></i> Select All' : '<i class="fas fa-times"></i> Deselect';
+            updateCounts();
+        });
+    });
+
+    // Clear Selection
+    clearBtn.addEventListener('click', function() {
+        document.querySelectorAll('.household-checkbox').forEach(cb => cb.checked = false);
+        selectAll.checked = false;
+        updateCounts();
+    });
+
+    // Update count on checkbox change
+    document.querySelectorAll('.household-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', updateCounts);
+    });
+
+    // Initial count
+    updateCounts();
+});
+</script>
+{% endblock %}

@@ -11,38 +11,98 @@ from core.decorators import role_required
 
 @login_required
 def household_list(request):
-    """Household list view with role-based filtering"""
+    """Household list view with role-based filtering and search"""
     user = request.user
+    from accounts.models import User as UserModel, UserProfile
 
     # Filter households based on user role and permissions
-    if user.is_superuser or user.role in ['ict_admin', 'me_staff']:
+    if user.is_superuser or user.role in ['ict_admin', 'me_staff', 'program_manager']:
         # Full access to all households
         households = Household.objects.all()
     elif user.role == 'mentor':
         # Mentors can only see households in their assigned villages
-        if hasattr(user, 'profile') and user.profile:
-            assigned_villages = user.profile.assigned_villages.all()
+        try:
+            profile = user.profile
+        except UserProfile.DoesNotExist:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        if profile:
+            assigned_villages = profile.assigned_villages.all()
             households = Household.objects.filter(village__in=assigned_villages)
         else:
-            # No villages assigned, no households visible
             households = Household.objects.none()
     elif user.role == 'field_associate':
-        # Field Associates see households in their area (same as mentors for now)
-        if hasattr(user, 'profile') and user.profile:
-            assigned_villages = user.profile.assigned_villages.all()
-            households = Household.objects.filter(village__in=assigned_villages)
+        # Field Associates see households from their supervised mentors' villages
+        try:
+            profile = user.profile
+        except UserProfile.DoesNotExist:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        # Get villages from supervised mentors
+        supervised_mentors = UserModel.objects.filter(
+            role='mentor',
+            is_active=True,
+            profile__supervisor=user
+        )
+        village_ids = []
+        for mentor in supervised_mentors:
+            if hasattr(mentor, 'profile') and mentor.profile:
+                mentor_villages = list(mentor.profile.assigned_villages.values_list('id', flat=True))
+                village_ids.extend(mentor_villages)
+        village_ids = list(set(village_ids))
+
+        if village_ids:
+            households = Household.objects.filter(village_id__in=village_ids)
         else:
             households = Household.objects.none()
     else:
         # Other roles have no access to households
         households = Household.objects.none()
 
-    households = households.order_by('-created_at')
+    # Search functionality - search by name, phone, or ID
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        households = households.filter(
+            Q(name__icontains=search_query) |
+            Q(phone_number__icontains=search_query) |
+            Q(national_id__icontains=search_query) |
+            Q(head_id_number__icontains=search_query) |
+            Q(head_phone_number__icontains=search_query) |
+            Q(head_first_name__icontains=search_query) |
+            Q(head_last_name__icontains=search_query)
+        )
+
+    # Filter by village
+    village_filter = request.GET.get('village', '')
+    if village_filter:
+        households = households.filter(village_id=village_filter)
+
+    households = households.select_related('village').order_by('-created_at')
+
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(households, 25)  # 25 per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Get villages for filter dropdown (based on user's access)
+    if user.is_superuser or user.role in ['ict_admin', 'me_staff', 'program_manager']:
+        filter_villages = Village.objects.all().order_by('name')
+    elif user.role == 'mentor':
+        filter_villages = user.profile.assigned_villages.all().order_by('name') if hasattr(user, 'profile') else Village.objects.none()
+    elif user.role == 'field_associate':
+        filter_villages = Village.objects.filter(id__in=village_ids).order_by('name') if village_ids else Village.objects.none()
+    else:
+        filter_villages = Village.objects.none()
 
     context = {
-        'households': households,
+        'households': page_obj,
+        'page_obj': page_obj,
         'page_title': 'Households',
-        'total_count': households.count(),
+        'total_count': paginator.count,
+        'search_query': search_query,
+        'village_filter': village_filter,
+        'filter_villages': filter_villages,
     }
 
     return render(request, 'households/household_list.html', context)
@@ -396,7 +456,10 @@ def eligibility_dashboard(request):
                 'level': result['eligibility_level'],
                 'eligible': result['eligibility_level'] in ['highly_eligible', 'eligible']
             })
-        except:
+        except Exception as e:
+            # Log error but continue processing other households
+            import logging
+            logging.getLogger(__name__).warning(f"Eligibility assessment failed for household {household.id}: {e}")
             continue
 
     # Calculate statistics

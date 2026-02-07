@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG MIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-friends"></i> {{ page_title }}</h2>
+            <p class="text-muted mb-0">Track mentoring visits, phone calls, and engagement activities</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                <a href="{% url 'reports:download_mentoring_report' %}{% if date_from or date_to %}?date_from={{ date_from|default:'' }}&date_to={{ date_to|default:'' }}{% endif %}" class="btn btn-success">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </a>
+                <a href="{% url 'reports:download_mentoring_pdf_report' %}{% if date_from or date_to %}?date_from={{ date_from|default:'' }}&date_to={{ date_to|default:'' }}{% endif %}" class="btn btn-danger">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </a>
+            </div>
+            <a href="{% url 'reports:report_list' %}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Back to Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" class="form-control" name="date_from" value="{{ date_from|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" class="form-control" name="date_to" value="{{ date_to|default:'' }}">
+                </div>
+                {% if mentors_list %}
+                <div class="col-md-3">
+                    <label class="form-label">Mentor</label>
+                    <select class="form-select" name="mentor_id">
+                        <option value="">All Mentors</option>
+                        {% for mentor in mentors_list %}
+                        <option value="{{ mentor.id }}" {% if selected_mentor == mentor.id|stringformat:"i" %}selected{% endif %}>
+                            {{ mentor.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Apply
+                    </button>
+                    <a href="{% url 'reports:mentoring_activities_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ stats.total_visits }}</h3>
+                            <p class="mb-0">Total House Visits</p>
+                            <small>{{ stats.visits_last_30_days }} in last 30 days</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-home fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ stats.total_calls }}</h3>
+                            <p class="mb-0">Total Phone Calls</p>
+                            <small>{{ stats.calls_last_30_days }} in last 30 days</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-phone fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ stats.unique_households_visited }}</h3>
+                            <p class="mb-0">Unique Households</p>
+                            <small>Visited at least once</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ stats.avg_visit_duration|floatformat:0 }} min</h3>
+                            <p class="mb-0">Avg Visit Duration</p>
+                            <small>{{ stats.successful_calls }} successful calls</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Monthly Activity Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyTrendsChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Visit Types</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="visitTypesChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Top Mentors -->
+        {% if top_mentors %}
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-trophy"></i> Top Mentors by Visits</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Mentor</th>
+                                    <th>Visits</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mentor in top_mentors %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ mentor.mentor__first_name }} {{ mentor.mentor__last_name }}</td>
+                                    <td><span class="badge bg-primary">{{ mentor.visit_count }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Visits -->
+        <div class="col-lg-{% if top_mentors %}4{% else %}6{% endif %} mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-home"></i> Recent House Visits</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_visits %}
+                    <div class="list-group list-group-flush">
+                        {% for visit in recent_visits %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ visit.household.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> {{ visit.mentor.get_full_name }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ visit.visit_date|date:"M d, Y" }}</small>
+                                    <br>
+                                    <span class="badge bg-info">{{ visit.get_visit_type_display }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No recent visits</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Calls -->
+        <div class="col-lg-{% if top_mentors %}4{% else %}6{% endif %} mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-phone"></i> Recent Phone Calls</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_calls %}
+                    <div class="list-group list-group-flush">
+                        {% for call in recent_calls %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ call.household.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> {{ call.mentor.get_full_name }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ call.call_date|date:"M d, Y" }}</small>
+                                    <br>
+                                    {% if call.successful_contact %}
+                                    <span class="badge bg-success">Successful</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">No Contact</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No recent calls</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = {{ chart_data|safe }};
+
+    // Monthly Trends Chart
+    const monthlyCtx = document.getElementById('monthlyTrendsChart').getContext('2d');
+    const months = chartData.monthly_visits.map(d => d.month);
+    const visitData = chartData.monthly_visits.map(d => d.count);
+    const callData = chartData.monthly_calls.map(d => d.count);
+
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: months.length > 0 ? months : ['No Data'],
+            datasets: [
+                {
+                    label: 'House Visits',
+                    data: visitData.length > 0 ? visitData : [0],
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Phone Calls',
+                    data: callData.length > 0 ? callData : [0],
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Visit Types Pie Chart
+    const visitTypesCtx = document.getElementById('visitTypesChart').getContext('2d');
+    const visitTypes = chartData.visit_types;
+
+    new Chart(visitTypesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: visitTypes.map(d => d.type),
+            datasets: [{
+                data: visitTypes.map(d => d.count),
+                backgroundColor: [
+                    '#3498db', '#27ae60', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

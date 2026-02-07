@@ -1,0 +1,54 @@
+{# KPI Card with Target Tracking #}
+{# Usage: {% include 'includes/kpi_card.html' with title='Enrollment' value=100 target=150 icon='fa-users' %} #}
+
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <p class="text-muted mb-1 small">{{ title }}</p>
+                <h3 class="mb-2 fw-bold">{{ value|default:0 }}</h3>
+                {% if target %}
+                {% with percentage=value|default:0|divisibleby:target %}
+                {% endwith %}
+                <div class="progress mb-2" style="height: 6px;">
+                    {% if target > 0 %}
+                    {% widthratio value target 100 as calc_percentage %}
+                    <div class="progress-bar
+                        {% if calc_percentage >= 80 %}bg-success{% elif calc_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                        role="progressbar"
+                        style="width: {{ calc_percentage }}%"
+                        aria-valuenow="{{ calc_percentage }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100">
+                    </div>
+                    {% endif %}
+                </div>
+                <small class="text-muted">
+                    {{ value|default:0 }} / {{ target }}
+                    {% if target > 0 %}
+                    {% widthratio value target 100 as calc_percentage %}
+                    ({{ calc_percentage }}%)
+                    {% endif %}
+                </small>
+                {% endif %}
+            </div>
+            <div class="rounded-3 p-3 {% if icon_bg %}bg-{{ icon_bg }}{% else %}bg-light{% endif %}">
+                <i class="fas {{ icon|default:'fa-chart-line' }} fs-4 {% if icon_color %}text-{{ icon_color }}{% else %}text-primary{% endif %}"></i>
+            </div>
+        </div>
+        {% if trend %}
+        <div class="mt-2">
+            <small class="{% if trend == 'up' %}text-success{% elif trend == 'down' %}text-danger{% else %}text-secondary{% endif %}">
+                <i class="fas fa-arrow-{{ trend|default:'right' }}"></i> {{ trend_text|default:'' }}
+            </small>
+        </div>
+        {% endif %}
+        {% if status %}
+        <div class="mt-2">
+            <span class="badge {% if status == 'on_track' %}bg-success{% elif status == 'at_risk' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                {{ status|title }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>

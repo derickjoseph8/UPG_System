@@ -251,17 +251,35 @@
                                 <label for="bmCycle" class="form-label">BM Cycle</label>
                                 <select class="form-select" id="bmCycle" name="bm_cycle">
                                     <option value="">Select BM Cycle...</option>
-                                    <!-- Options will be loaded via AJAX -->
+                                    {% for cycle in bm_cycles %}
+                                    <option value="{{ cycle.id }}">{{ cycle.bm_cycle_name }}</option>
+                                    {% endfor %}
                                 </select>
+                                {% if user_role == 'mentor' %}
+                                <small class="text-muted">Showing BM Cycles you are attached to</small>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="assignedMentor" class="form-label">Assigned Mentor</label>
+                                {% if current_mentor_user %}
+                                <!-- Auto-select for mentors -->
+                                <input type="hidden" name="assigned_mentor" value="{{ current_mentor_user.id }}">
+                                <input type="text" class="form-control" value="{{ current_mentor_user.get_full_name }}" readonly>
+                                <small class="text-success"><i class="fas fa-check-circle"></i> Auto-assigned to you</small>
+                                {% else %}
+                                <!-- Dropdown for FA/PM -->
                                 <select class="form-select" id="assignedMentor" name="assigned_mentor">
                                     <option value="">Select Mentor...</option>
-                                    <!-- Options will be loaded via AJAX -->
+                                    {% for mentor in available_mentors %}
+                                    <option value="{{ mentor.id }}">{{ mentor.get_full_name|default:mentor.username }}</option>
+                                    {% endfor %}
                                 </select>
+                                {% if user_role == 'field_associate' %}
+                                <small class="text-muted">Showing mentors under your supervision</small>
+                                {% endif %}
+                                {% endif %}
                             </div>
                         </div>
                     </div>
