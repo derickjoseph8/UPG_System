@@ -5,7 +5,8 @@ All data returned is anonymized - NO PII is exposed.
 """
 from datetime import datetime, date, timedelta
 from typing import Optional, Dict, Any, List
-from django.db.models import Count, Sum, Avg, Q, F, Case, When, Value, IntegerField
+from decimal import Decimal
+from django.db.models import Count, Sum, Avg, Q, F, Case, When, Value, IntegerField, DecimalField
 from django.db.models.functions import TruncMonth, Coalesce
 from django.utils import timezone
 from django.conf import settings
@@ -315,24 +316,23 @@ class VEReportingService:
             total_members = BSGMember.objects.count()
 
             # Savings totals (all savings are deposits in this model)
-            deposit_total = SavingsRecord.objects.aggregate(
-                total=Coalesce(Sum('amount'), 0)
-            )['total']
+            deposit_result = SavingsRecord.objects.aggregate(total=Sum('amount'))
+            deposit_total = deposit_result['total'] or Decimal('0')
 
             total_savings = float(deposit_total)
             withdrawal_total = 0  # Withdrawals not tracked separately in this model
 
             # Loan metrics
             loan_stats = BSGLoan.objects.aggregate(
-                disbursed=Coalesce(Sum('loan_amount'), 0),
-                outstanding=Coalesce(Sum('balance'), 0)
+                disbursed=Sum('loan_amount'),
+                outstanding=Sum('balance')
             )
             disbursed = float(loan_stats['disbursed'] or 0)
             outstanding = float(loan_stats['outstanding'] or 0)
             repaid = disbursed - outstanding
             repayment_rate = (repaid / disbursed) if disbursed > 0 else 0
 
-        except Exception:
+        except Exception as e:
             total_groups = 0
             total_members = 0
             deposit_total = 0
