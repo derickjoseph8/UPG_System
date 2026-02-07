@@ -380,3 +380,76 @@ def revoke_api_key(request, key_id):
     api_key.save()
 
     return JsonResponse({"message": "API key revoked successfully"})
+
+
+# ============ Web Views (For Settings Page) ============
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+
+
+@login_required
+@user_passes_test(is_admin)
+def ve_api_keys_list(request):
+    """List all VE API keys (web view)"""
+    api_keys = VEApiKey.objects.filter(is_deleted=False).order_by('-created_at')
+    return render(request, 've_reporting/api_keys.html', {
+        'api_keys': api_keys
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def ve_api_key_create_view(request):
+    """Create a new VE API key (web view)"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        expires_in_days = request.POST.get('expires_in_days')
+
+        if not name:
+            messages.error(request, 'Key name is required.')
+            return render(request, 've_reporting/api_key_create.html')
+
+        # Generate key
+        full_key, key_hash, key_prefix = VEApiKey.generate_key()
+
+        # Calculate expiry
+        expires_at = None
+        if expires_in_days:
+            from datetime import timedelta
+            expires_at = timezone.now() + timedelta(days=int(expires_in_days))
+
+        # Create key
+        api_key = VEApiKey.objects.create(
+            name=name,
+            key_hash=key_hash,
+            key_prefix=key_prefix[:12],
+            scopes=["ve-reporting:read"],
+            expires_at=expires_at,
+            created_by=request.user
+        )
+
+        messages.success(request, f'API Key "{name}" created successfully!')
+        return render(request, 've_reporting/api_key_create.html', {
+            'new_key': full_key,
+            'key_name': name
+        })
+
+    return render(request, 've_reporting/api_key_create.html')
+
+
+@login_required
+@user_passes_test(is_admin)
+def ve_api_key_revoke_view(request, key_id):
+    """Revoke a VE API key (web view)"""
+    api_key = get_object_or_404(VEApiKey, uuid=key_id, is_deleted=False)
+
+    if request.method == 'POST':
+        api_key.is_active = False
+        api_key.revoked_at = timezone.now()
+        api_key.revoked_by = request.user
+        api_key.revoke_reason = 'Revoked via admin interface'
+        api_key.save()
+        messages.success(request, f'API Key "{api_key.name}" has been revoked.')
+
+    return redirect('ve_reporting:ve_api_keys')

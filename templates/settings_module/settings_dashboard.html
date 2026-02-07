@@ -224,6 +224,35 @@
     </div>
 </div>
 
+<div class="row mb-4">
+    <!-- VE Data Hub API Keys -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-key"></i> VE Data Hub API Keys</h5>
+                <span class="badge bg-light text-info">{{ ve_api_key_count|default:0 }} keys</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Manage API keys for Village Enterprise Data Hub integration</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-shield-alt text-success me-2"></i>Secure API Access</li>
+                    <li><i class="fas fa-chart-line text-primary me-2"></i>Aggregated Reporting</li>
+                    <li><i class="fas fa-lock text-warning me-2"></i>Read-Only Data Access</li>
+                    <li><i class="fas fa-clock text-info me-2"></i>Key Expiration Management</li>
+                </ul>
+                <div class="d-flex gap-2 mt-3">
+                    <a href="{% url 've_reporting:ve_api_keys' %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-key"></i> Manage API Keys
+                    </a>
+                    <a href="{% url 've_reporting:ve_api_key_create' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus"></i> Create Key
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- System Information -->
 <div class="row">
     <div class="col-md-6 mb-4">

@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Create VE API Key - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-plus"></i> Create VE API Key</h1>
+</div>
+
+{% if new_key %}
+<!-- Key Created Successfully -->
+<div class="alert alert-success">
+    <h4><i class="fas fa-check-circle"></i> API Key Created Successfully!</h4>
+    <p class="mb-2">Your new API key has been generated. <strong>Copy it now - you won't be able to see it again!</strong></p>
+</div>
+
+<div class="card border-success mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="fas fa-key"></i> Your New API Key</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label"><strong>Key Name:</strong></label>
+            <p>{{ key_name }}</p>
+        </div>
+        <div class="mb-3">
+            <label class="form-label"><strong>API Key (copy now!):</strong></label>
+            <div class="input-group">
+                <input type="text" class="form-control font-monospace" id="apiKey" value="{{ new_key }}" readonly>
+                <button class="btn btn-outline-primary" type="button" onclick="copyKey()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+            <small class="text-danger">This key will not be shown again. Save it securely!</small>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyKey() {
+    var keyInput = document.getElementById('apiKey');
+    keyInput.select();
+    document.execCommand('copy');
+    alert('API Key copied to clipboard!');
+}
+</script>
+
+<a href="{% url 've_reporting:ve_api_keys' %}" class="btn btn-primary">
+    <i class="fas fa-list"></i> View All Keys
+</a>
+
+{% else %}
+<!-- Create Key Form -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-key"></i> New API Key Details</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="name" class="form-label">Key Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name" required
+                       placeholder="e.g., VE Data Hub Production Key">
+                <small class="text-muted">A descriptive name to identify this key</small>
+            </div>
+
+            <div class="mb-3">
+                <label for="expires_in_days" class="form-label">Expiration</label>
+                <select class="form-select" id="expires_in_days" name="expires_in_days">
+                    <option value="">Never expires</option>
+                    <option value="30">30 days</option>
+                    <option value="90">90 days</option>
+                    <option value="180">180 days</option>
+                    <option value="365">1 year</option>
+                </select>
+                <small class="text-muted">When should this key expire?</small>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Important:</strong> The API key will only be shown once after creation. Make sure to copy it immediately!
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-key"></i> Generate API Key
+                </button>
+                <a href="{% url 've_reporting:ve_api_keys' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

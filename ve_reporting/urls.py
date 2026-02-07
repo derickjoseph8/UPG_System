@@ -21,8 +21,13 @@ urlpatterns = [
     path('milestones/', views.MilestonesView.as_view(), name='milestones'),
     path('timeseries/', views.TimeSeriesView.as_view(), name='timeseries'),
 
-    # Admin endpoints (MIS admin authentication required)
+    # Admin API endpoints (MIS admin authentication required)
     path('admin/keys/', views.list_api_keys, name='list_keys'),
     path('admin/keys/create/', views.create_api_key, name='create_key'),
     path('admin/keys/<uuid:key_id>/revoke/', views.revoke_api_key, name='revoke_key'),
+
+    # Web views for settings page (admin access)
+    path('settings/keys/', views.ve_api_keys_list, name='ve_api_keys'),
+    path('settings/keys/create/', views.ve_api_key_create_view, name='ve_api_key_create'),
+    path('settings/keys/<uuid:key_id>/revoke/', views.ve_api_key_revoke_view, name='ve_api_key_revoke'),
 ]
