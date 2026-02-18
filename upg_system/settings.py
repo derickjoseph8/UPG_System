@@ -208,12 +208,12 @@ ENABLE_SSL = config('ENABLE_SSL', default=False, cast=bool)
 # Session Configuration
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SECURE = not DEBUG  # Secure cookies in production (when DEBUG=False)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
 SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
 # CSRF Configuration
-CSRF_COOKIE_SECURE = not DEBUG  # Secure cookies in production (when DEBUG=False)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=bool)
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token for AJAX requests
 CSRF_COOKIE_SAMESITE = 'Lax'
 
