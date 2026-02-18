@@ -37,11 +37,14 @@
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Household Name:</strong> {{ household.name }}</p>
+                        <p><strong>Main Caregiver:</strong> {{ household.main_caregiver|default:"Not provided" }}</p>
                         <p><strong>Phone Number:</strong> {{ household.phone_number|default:"Not provided" }}</p>
                         <p><strong>Village:</strong> {{ household.village.name|default:"Not specified" }}</p>
+                        <p><strong>Landmark:</strong> {{ household.landmark|default:"Not provided" }}</p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>National ID:</strong> {{ household.national_id|default:"Not provided" }}</p>
+                        <p><strong>BM Cycle:</strong> {{ household.bm_cycle.bm_cycle_name|default:"Not assigned" }}</p>
                         <p><strong>Disability:</strong> {{ household.disability|yesno:"Yes,No" }}</p>
                         <p><strong>Members:</strong> {{ household.members.count }} people</p>
                     </div>
@@ -75,6 +78,78 @@
                         </p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Assigned Staff -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-user-tie"></i> Assigned Staff</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Mentor:</strong>
+                            {% if household.assigned_mentor %}
+                                {{ household.assigned_mentor.first_name }} {{ household.assigned_mentor.last_name }}
+                                {% if household.assigned_mentor.user %}
+                                    <br><small class="text-muted">{{ household.assigned_mentor.user.email }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Supervisor:</strong>
+                            {% if household.mentor_supervisor %}
+                                {{ household.mentor_supervisor.get_full_name|default:household.mentor_supervisor.username }}
+                                <br><small class="text-muted">{{ household.mentor_supervisor.email }}</small>
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dwelling Characteristics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-building"></i> Dwelling Characteristics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Habitable Rooms:</strong> {{ household.no_of_habitable_rooms|default:"-" }}</p>
+                        <p><strong>Dwelling Tenure:</strong> {{ household.get_dwelling_tenure_display|default:"-" }}</p>
+                        <p><strong>Dwelling Risk:</strong>
+                            {% if household.dwelling_risk %}
+                                <span class="badge bg-{% if household.dwelling_risk == 'low' %}success{% elif household.dwelling_risk == 'medium' %}warning{% elif household.dwelling_risk == 'high' %}danger{% else %}dark{% endif %}">
+                                    {{ household.get_dwelling_risk_display }}
+                                </span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Roof Type:</strong> {{ household.get_roof_type_display|default:"-" }}</p>
+                        <p><strong>Wall Type:</strong> {{ household.get_wall_type_display|default:"-" }}</p>
+                        <p><strong>Floor Type:</strong> {{ household.get_floor_type_display|default:"-" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Lighting:</strong> {{ household.get_lighting_fuel_display|default:"-" }}</p>
+                        <p><strong>Water Source:</strong> {{ household.get_water_source_display|default:"-" }}</p>
+                        <p><strong>Waste Disposal:</strong> {{ household.get_waste_disposal_display|default:"-" }}</p>
+                        <p><strong>Cooking Fuel:</strong> {{ household.get_cooking_fuel_display|default:"-" }}</p>
+                    </div>
+                </div>
+                {% if household.notes %}
+                <hr>
+                <p><strong>Notes:</strong> {{ household.notes }}</p>
+                {% endif %}
             </div>
         </div>
 

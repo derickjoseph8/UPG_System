@@ -5,7 +5,7 @@ Based on Graduation Model Tracking System
 
 from django.db import models
 from django.contrib.auth import get_user_model
-from core.models import Village, Program, SubCounty, County
+from core.models import Village, Program, SubCounty, County, Mentor, BusinessMentorCycle
 
 User = get_user_model()
 
@@ -14,6 +14,96 @@ class Household(models.Model):
     """
     Household basic information and demographics
     """
+    # Dwelling Tenure Choices
+    DWELLING_TENURE_CHOICES = [
+        ('owned', 'Owned'),
+        ('rented', 'Rented'),
+        ('family', 'Family'),
+        ('squatter', 'Squatter'),
+        ('other', 'Other'),
+    ]
+
+    # Dwelling Risk Choices
+    DWELLING_RISK_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    # Roof Type Choices
+    ROOF_TYPE_CHOICES = [
+        ('iron_sheets', 'Iron Sheets'),
+        ('tiles', 'Tiles'),
+        ('concrete', 'Concrete'),
+        ('thatch', 'Thatch'),
+        ('mud', 'Mud'),
+        ('other', 'Other'),
+    ]
+
+    # Wall Type Choices
+    WALL_TYPE_CHOICES = [
+        ('brick', 'Brick'),
+        ('stone', 'Stone'),
+        ('mud', 'Mud'),
+        ('wood', 'Wood'),
+        ('iron_sheets', 'Iron Sheets'),
+        ('other', 'Other'),
+    ]
+
+    # Floor Type Choices
+    FLOOR_TYPE_CHOICES = [
+        ('cement', 'Cement'),
+        ('tiles', 'Tiles'),
+        ('mud', 'Mud'),
+        ('wood', 'Wood'),
+        ('other', 'Other'),
+    ]
+
+    # Lighting Fuel Choices
+    LIGHTING_FUEL_CHOICES = [
+        ('electricity', 'Electricity'),
+        ('solar', 'Solar'),
+        ('kerosene', 'Kerosene'),
+        ('candle', 'Candle'),
+        ('firewood', 'Firewood'),
+        ('none', 'None'),
+        ('other', 'Other'),
+    ]
+
+    # Water Source Choices
+    WATER_SOURCE_CHOICES = [
+        ('piped', 'Piped'),
+        ('borehole', 'Borehole'),
+        ('well', 'Well'),
+        ('spring', 'Spring'),
+        ('river', 'River'),
+        ('rain', 'Rain'),
+        ('vendor', 'Vendor'),
+        ('other', 'Other'),
+    ]
+
+    # Waste Disposal Choices
+    WASTE_DISPOSAL_CHOICES = [
+        ('flush_toilet', 'Flush Toilet'),
+        ('pit_latrine', 'Pit Latrine'),
+        ('vip_latrine', 'VIP Latrine'),
+        ('bush', 'Bush'),
+        ('shared', 'Shared'),
+        ('none', 'None'),
+        ('other', 'Other'),
+    ]
+
+    # Cooking Fuel Choices
+    COOKING_FUEL_CHOICES = [
+        ('electricity', 'Electricity'),
+        ('gas', 'Gas'),
+        ('kerosene', 'Kerosene'),
+        ('charcoal', 'Charcoal'),
+        ('firewood', 'Firewood'),
+        ('other', 'Other'),
+    ]
+
     # Geographic/Administrative Information
     village = models.ForeignKey(Village, on_delete=models.CASCADE)
     subcounty = models.ForeignKey(SubCounty, on_delete=models.SET_NULL, null=True, blank=True, related_name='households')
@@ -47,6 +137,33 @@ class Household(models.Model):
     has_clean_water = models.BooleanField(default=False, help_text="Household has clean water access")
     location = models.CharField(max_length=200, blank=True, help_text="Location description (rural, urban, remote)")
     consent_given = models.BooleanField(default=False, help_text="Household consent for program participation")
+
+    # ESR Import Fields - Dwelling Characteristics
+    main_caregiver = models.CharField(max_length=200, blank=True, help_text="Main caregiver name")
+    landmark = models.CharField(max_length=200, blank=True, help_text="Landmark near the household")
+    no_of_habitable_rooms = models.PositiveIntegerField(null=True, blank=True, help_text="Number of habitable rooms")
+    dwelling_tenure = models.CharField(max_length=20, choices=DWELLING_TENURE_CHOICES, blank=True)
+    dwelling_risk = models.CharField(max_length=20, choices=DWELLING_RISK_CHOICES, blank=True)
+    roof_type = models.CharField(max_length=20, choices=ROOF_TYPE_CHOICES, blank=True)
+    wall_type = models.CharField(max_length=20, choices=WALL_TYPE_CHOICES, blank=True)
+    floor_type = models.CharField(max_length=20, choices=FLOOR_TYPE_CHOICES, blank=True)
+
+    # ESR Import Fields - Utilities
+    lighting_fuel = models.CharField(max_length=20, choices=LIGHTING_FUEL_CHOICES, blank=True)
+    water_source = models.CharField(max_length=20, choices=WATER_SOURCE_CHOICES, blank=True)
+    waste_disposal = models.CharField(max_length=20, choices=WASTE_DISPOSAL_CHOICES, blank=True)
+    cooking_fuel = models.CharField(max_length=20, choices=COOKING_FUEL_CHOICES, blank=True)
+
+    # ESR Import Fields - Staff Assignment
+    assigned_mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_households')
+    mentor_supervisor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='supervised_households', help_text="Mentor's supervisor")
+    bm_cycle = models.ForeignKey(BusinessMentorCycle, on_delete=models.SET_NULL, null=True, blank=True, related_name='households')
+
+    # ESR Import Tracking
+    import_batch_id = models.CharField(max_length=100, blank=True, help_text="Import batch identifier")
+    imported_at = models.DateTimeField(null=True, blank=True)
+    imported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='imported_households')
+    notes = models.TextField(blank=True, help_text="Additional notes")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

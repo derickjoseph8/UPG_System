@@ -189,10 +189,11 @@ def household_detail(request, pk):
 
 @login_required
 def household_edit(request, pk):
-    """Edit household"""
+    """Edit household with full ESR fields"""
     household = get_object_or_404(Household, pk=pk)
 
     if request.method == 'POST':
+        # Basic fields
         household.name = request.POST.get('name', household.name)
         household.phone_number = request.POST.get('phone_number', household.phone_number)
         village_id = request.POST.get('village')
@@ -204,18 +205,65 @@ def household_edit(request, pk):
         household.national_id = request.POST.get('national_id', household.national_id)
         household.disability = request.POST.get('disability') == 'on'
 
+        # ESR fields
+        household.main_caregiver = request.POST.get('main_caregiver', '')
+        household.landmark = request.POST.get('landmark', '')
+        household.notes = request.POST.get('notes', '')
+
+        # Staff assignment
+        bm_cycle_id = request.POST.get('bm_cycle')
+        mentor_id = request.POST.get('assigned_mentor')
+        supervisor_id = request.POST.get('mentor_supervisor')
+
+        household.bm_cycle_id = bm_cycle_id if bm_cycle_id else None
+        household.assigned_mentor_id = mentor_id if mentor_id else None
+        household.mentor_supervisor_id = supervisor_id if supervisor_id else None
+
+        # Dwelling characteristics
+        rooms = request.POST.get('no_of_habitable_rooms')
+        household.no_of_habitable_rooms = int(rooms) if rooms else None
+        household.dwelling_tenure = request.POST.get('dwelling_tenure', '')
+        household.dwelling_risk = request.POST.get('dwelling_risk', '')
+        household.roof_type = request.POST.get('roof_type', '')
+        household.wall_type = request.POST.get('wall_type', '')
+        household.floor_type = request.POST.get('floor_type', '')
+
+        # Utilities
+        household.lighting_fuel = request.POST.get('lighting_fuel', '')
+        household.water_source = request.POST.get('water_source', '')
+        household.waste_disposal = request.POST.get('waste_disposal', '')
+        household.cooking_fuel = request.POST.get('cooking_fuel', '')
+
         household.save()
         messages.success(request, f'Household "{household.name}" updated successfully!')
         return redirect('households:household_detail', pk=household.pk)
 
     villages = Village.objects.select_related('subcounty_obj').all()
-    from core.models import SubCounty
+    from core.models import SubCounty, Mentor, BusinessMentorCycle
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
     subcounties = SubCounty.objects.select_related('county').all()
+    mentors = Mentor.objects.all().order_by('first_name', 'last_name')
+    bm_cycles = BusinessMentorCycle.objects.all().order_by('-created_at')
+    supervisors = User.objects.filter(role__in=['field_associate', 'me_staff', 'program_manager']).order_by('first_name', 'last_name')
 
     context = {
         'household': household,
         'villages': villages,
         'subcounties': subcounties,
+        'mentors': mentors,
+        'bm_cycles': bm_cycles,
+        'supervisors': supervisors,
+        'dwelling_tenure_choices': Household.DWELLING_TENURE_CHOICES,
+        'dwelling_risk_choices': Household.DWELLING_RISK_CHOICES,
+        'roof_type_choices': Household.ROOF_TYPE_CHOICES,
+        'wall_type_choices': Household.WALL_TYPE_CHOICES,
+        'floor_type_choices': Household.FLOOR_TYPE_CHOICES,
+        'lighting_fuel_choices': Household.LIGHTING_FUEL_CHOICES,
+        'water_source_choices': Household.WATER_SOURCE_CHOICES,
+        'waste_disposal_choices': Household.WASTE_DISPOSAL_CHOICES,
+        'cooking_fuel_choices': Household.COOKING_FUEL_CHOICES,
         'page_title': f'Edit - {household.name}',
     }
     return render(request, 'households/household_edit.html', context)
