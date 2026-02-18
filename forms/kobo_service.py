@@ -303,23 +303,32 @@ class XLSFormConverter:
         'radio': 'select_one',
         'checkbox': 'select_multiple',
         'boolean': 'select_one yes_no',
+        'rank': 'rank',
+        'matrix': 'select_one',  # Matrix uses likert appearance
+        'cascade': 'select_one',  # Cascade uses cascading select
 
         # Media Fields
         'file': 'file',
         'image': 'image',
         'audio': 'audio',
         'video': 'video',
+        'background_audio': 'background-audio',
 
         # Special Fields
         'rating': 'integer',
         'location': 'geopoint',
+        'geotrace': 'geotrace',
+        'geoshape': 'geoshape',
         'signature': 'image',
         'barcode': 'barcode',
         'range': 'range',
+        'acknowledge': 'acknowledge',
+        'hidden': 'hidden',
 
         # Organizational
         'section': 'begin_group',
         'group': 'begin_group',
+        'repeat': 'begin_repeat',
     }
 
     def __init__(self, form_template):

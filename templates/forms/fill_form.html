@@ -5,503 +5,1125 @@
 
 {% block extra_css %}
 <style>
-    /* Multi-step form wizard styles */
-    .form-wizard {
-        position: relative;
+    /* ========================================
+       KOBO/ENKETO STYLE FORM
+       Clean, minimal design matching KoboToolbox
+       ======================================== */
+
+    :root {
+        --kobo-primary: #2095f2;
+        --kobo-primary-dark: #1976d2;
+        --kobo-success: #4caf50;
+        --kobo-danger: #f44336;
+        --kobo-warning: #ff9800;
+        --kobo-gray-light: #f5f5f5;
+        --kobo-gray: #9e9e9e;
+        --kobo-gray-dark: #616161;
+        --kobo-border: #e0e0e0;
+        --kobo-text: #212121;
+        --kobo-text-secondary: #757575;
     }
 
-    .wizard-progress {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 30px;
-        padding: 0 10px;
-        position: relative;
+    /* Form container - Enketo style */
+    .enketo-form {
+        max-width: 720px;
+        margin: 0 auto;
+        background: #fff;
+        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
-    .wizard-progress::before {
-        content: '';
-        position: absolute;
-        top: 15px;
-        left: 30px;
-        right: 30px;
-        height: 3px;
-        background: #e9ecef;
-        z-index: 0;
-    }
-
-    .wizard-progress-bar {
-        position: absolute;
-        top: 15px;
-        left: 30px;
-        height: 3px;
-        background: #198754;
-        z-index: 1;
-        transition: width 0.3s ease;
-    }
-
-    .wizard-step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: relative;
-        z-index: 2;
-        cursor: pointer;
-    }
-
-    .wizard-step-number {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #e9ecef;
-        color: #6c757d;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.3s ease;
-        border: 2px solid #e9ecef;
-    }
-
-    .wizard-step.active .wizard-step-number {
-        background: #0d6efd;
+    /* Form header - Kobo style */
+    .form-header {
+        background: var(--kobo-primary);
         color: white;
-        border-color: #0d6efd;
+        padding: 20px 24px;
+        margin: -1rem -1rem 0 -1rem;
     }
 
-    .wizard-step.completed .wizard-step-number {
-        background: #198754;
-        color: white;
-        border-color: #198754;
-    }
-
-    .wizard-step-label {
-        margin-top: 8px;
-        font-size: 12px;
-        color: #6c757d;
-        text-align: center;
-        max-width: 100px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .wizard-step.active .wizard-step-label {
-        color: #0d6efd;
+    .form-header h1 {
+        margin: 0 0 8px 0;
+        font-size: 22px;
         font-weight: 500;
     }
 
-    .wizard-step.completed .wizard-step-label {
-        color: #198754;
+    .form-header .form-description {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.9;
     }
 
-    /* Form page styles */
+    /* Progress bar - Kobo style */
+    .progress-container {
+        background: var(--kobo-gray-light);
+        padding: 12px 24px;
+        margin: 0 -1rem;
+        border-bottom: 1px solid var(--kobo-border);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .progress-bar-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .progress-bar-track {
+        flex: 1;
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--kobo-primary);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .progress-text {
+        font-size: 13px;
+        color: var(--kobo-text-secondary);
+        min-width: 45px;
+        text-align: right;
+    }
+
+    /* Page navigation - Kobo style */
+    .page-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 12px 24px;
+        margin: 0 -1rem;
+        background: #fff;
+        border-bottom: 1px solid var(--kobo-border);
+        overflow-x: auto;
+    }
+
+    .page-tab {
+        padding: 8px 16px;
+        border: none;
+        background: transparent;
+        color: var(--kobo-text-secondary);
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 4px;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+
+    .page-tab:hover {
+        background: var(--kobo-gray-light);
+    }
+
+    .page-tab.active {
+        background: var(--kobo-primary);
+        color: white;
+    }
+
+    .page-tab.completed {
+        color: var(--kobo-success);
+    }
+
+    .page-tab.completed::before {
+        content: '✓ ';
+    }
+
+    /* Form pages */
     .form-page {
         display: none;
-        animation: fadeIn 0.3s ease;
+        padding: 24px 0;
     }
 
     .form-page.active {
         display: block;
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* Section/Group header - Enketo style */
+    .enketo-group {
+        margin: 24px 0;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
     }
 
-    .form-page-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 25px;
-        border-left: 4px solid #0d6efd;
+    .enketo-group-header {
+        background: var(--kobo-gray-light);
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--kobo-border);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 
-    .form-page-header h4 {
+    .enketo-group-header h3 {
         margin: 0;
-        color: #212529;
-        font-weight: 600;
-    }
-
-    .form-page-header p {
-        margin: 5px 0 0 0;
-        color: #6c757d;
-        font-size: 14px;
-    }
-
-    /* Field styling */
-    .form-field-container {
-        margin-bottom: 20px;
-        padding: 15px;
-        background: #fff;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .form-field-container:hover {
-        border-color: #dee2e6;
-    }
-
-    .form-field-container:focus-within {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-    }
-
-    .field-label {
+        font-size: 15px;
         font-weight: 500;
-        margin-bottom: 8px;
-        color: #212529;
+        color: var(--kobo-text);
     }
 
-    .field-required {
-        color: #dc3545;
-        margin-left: 3px;
+    .enketo-group-header .collapse-icon {
+        color: var(--kobo-gray);
+        transition: transform 0.2s;
     }
 
-    .field-help-text {
+    .enketo-group.collapsed .collapse-icon {
+        transform: rotate(-90deg);
+    }
+
+    .enketo-group.collapsed .enketo-group-body {
+        display: none;
+    }
+
+    .enketo-group-body {
+        padding: 16px 20px;
+    }
+
+    /* Question container - Enketo style */
+    .question {
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .question:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    /* Question number */
+    .question-number {
+        display: inline-block;
+        min-width: 28px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+        background: var(--kobo-gray-light);
+        color: var(--kobo-text-secondary);
+        border-radius: 14px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+
+    /* Question label - Enketo style */
+    .question-label {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--kobo-text);
+    }
+
+    .question-label .required-indicator {
+        color: var(--kobo-danger);
+        margin-left: 4px;
+    }
+
+    .required-text {
+        display: inline-block;
+        font-size: 11px;
+        color: var(--kobo-danger);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 8px;
+        font-weight: 500;
+    }
+
+    /* Help text / Hint - Enketo style */
+    .question-hint {
+        display: block;
         font-size: 13px;
-        color: #6c757d;
-        margin-top: 6px;
+        color: var(--kobo-text-secondary);
+        margin-bottom: 12px;
+        font-style: italic;
     }
 
-    /* Rating field */
-    .rating-group {
+    /* Text inputs - Enketo style */
+    .enketo-input {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 15px;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        background: #fff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .enketo-input:focus {
+        outline: none;
+        border-color: var(--kobo-primary);
+        box-shadow: 0 0 0 3px rgba(32, 149, 242, 0.15);
+    }
+
+    .enketo-input::placeholder {
+        color: #bdbdbd;
+    }
+
+    .enketo-input.invalid {
+        border-color: var(--kobo-danger);
+    }
+
+    /* Textarea */
+    textarea.enketo-input {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    /* Select dropdown - Enketo style */
+    .enketo-select {
+        width: 100%;
+        padding: 12px 40px 12px 14px;
+        font-size: 15px;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23757575'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 10px center;
+        background-size: 24px;
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .enketo-select:focus {
+        outline: none;
+        border-color: var(--kobo-primary);
+        box-shadow: 0 0 0 3px rgba(32, 149, 242, 0.15);
+    }
+
+    /* Radio/Checkbox options - Enketo style */
+    .option-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .option-list.horizontal {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .option-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .option-item:hover {
+        background: var(--kobo-gray-light);
+        border-color: var(--kobo-gray);
+    }
+
+    .option-item.selected {
+        background: #e3f2fd;
+        border-color: var(--kobo-primary);
+    }
+
+    .option-item input[type="radio"],
+    .option-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 0 12px 0 0;
+        accent-color: var(--kobo-primary);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .option-item .option-label {
+        font-size: 14px;
+        color: var(--kobo-text);
+        line-height: 1.4;
+    }
+
+    /* Yes/No toggle - Enketo style */
+    .yesno-toggle {
+        display: flex;
+        gap: 0;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
+        max-width: 240px;
+    }
+
+    .yesno-btn {
+        flex: 1;
+        padding: 14px 24px;
+        border: none;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: var(--kobo-text-secondary);
+    }
+
+    .yesno-btn:first-child {
+        border-right: 1px solid var(--kobo-border);
+    }
+
+    .yesno-btn:hover {
+        background: var(--kobo-gray-light);
+    }
+
+    .yesno-btn.selected {
+        background: var(--kobo-primary);
+        color: white;
+    }
+
+    /* Rating - Enketo style (likert) */
+    .rating-scale {
+        display: flex;
+        gap: 0;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .rating-option {
+        flex: 1;
+        padding: 14px 8px;
+        border: none;
+        border-right: 1px solid var(--kobo-border);
+        background: #fff;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+        color: var(--kobo-text);
+    }
+
+    .rating-option:last-child {
+        border-right: none;
+    }
+
+    .rating-option:hover {
+        background: var(--kobo-gray-light);
+    }
+
+    .rating-option.selected {
+        background: var(--kobo-primary);
+        color: white;
+    }
+
+    /* Range slider - Enketo style */
+    .range-container {
+        padding: 10px 0;
+    }
+
+    .enketo-range {
+        width: 100%;
+        height: 6px;
+        -webkit-appearance: none;
+        background: var(--kobo-border);
+        border-radius: 3px;
+        outline: none;
+    }
+
+    .enketo-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--kobo-primary);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .enketo-range::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: var(--kobo-primary);
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+    }
+
+    .range-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--kobo-text-secondary);
+    }
+
+    .range-current {
+        text-align: center;
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--kobo-primary);
+        margin-top: 12px;
+    }
+
+    /* Note/Read-only text - Enketo style */
+    .note-content {
+        background: #fff8e1;
+        border-left: 4px solid var(--kobo-warning);
+        padding: 16px 20px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--kobo-text);
+        border-radius: 0 4px 4px 0;
+    }
+
+    /* GPS Location - Enketo style */
+    .geopoint-container {
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .geopoint-display {
+        padding: 16px;
+        background: var(--kobo-gray-light);
+        text-align: center;
+    }
+
+    .geopoint-display .coords {
+        font-family: monospace;
+        font-size: 14px;
+        color: var(--kobo-text);
+        margin-bottom: 8px;
+    }
+
+    .geopoint-display .accuracy {
+        font-size: 12px;
+        color: var(--kobo-text-secondary);
+    }
+
+    .geopoint-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        background: var(--kobo-primary);
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .geopoint-btn:hover {
+        background: var(--kobo-primary-dark);
+    }
+
+    .geopoint-btn.loading {
+        background: var(--kobo-gray);
+        cursor: wait;
+    }
+
+    /* File/Image upload - Enketo style */
+    .file-upload {
+        border: 2px dashed var(--kobo-border);
+        border-radius: 4px;
+        padding: 32px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fafafa;
+    }
+
+    .file-upload:hover {
+        border-color: var(--kobo-primary);
+        background: #f5f5f5;
+    }
+
+    .file-upload.dragover {
+        border-color: var(--kobo-primary);
+        background: #e3f2fd;
+    }
+
+    .file-upload-icon {
+        font-size: 48px;
+        color: var(--kobo-gray);
+        margin-bottom: 12px;
+    }
+
+    .file-upload-text {
+        font-size: 14px;
+        color: var(--kobo-text);
+        margin-bottom: 4px;
+    }
+
+    .file-upload-hint {
+        font-size: 12px;
+        color: var(--kobo-text-secondary);
+    }
+
+    .file-preview {
+        margin-top: 16px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .file-preview img {
+        max-width: 80px;
+        max-height: 80px;
+        border-radius: 4px;
+        object-fit: cover;
+    }
+
+    .file-preview .file-info {
+        flex: 1;
+    }
+
+    .file-preview .file-name {
+        font-size: 14px;
+        color: var(--kobo-text);
+        word-break: break-all;
+    }
+
+    .file-preview .file-size {
+        font-size: 12px;
+        color: var(--kobo-text-secondary);
+    }
+
+    .file-preview .remove-btn {
+        padding: 6px;
+        border: none;
+        background: none;
+        color: var(--kobo-danger);
+        cursor: pointer;
+        font-size: 18px;
+    }
+
+    /* Signature - Enketo style */
+    .signature-pad {
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .signature-pad canvas {
+        width: 100%;
+        height: 150px;
+        background: #fff;
+        cursor: crosshair;
+        touch-action: none;
+    }
+
+    .signature-pad-actions {
+        display: flex;
+        border-top: 1px solid var(--kobo-border);
+    }
+
+    .signature-pad-actions button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background: var(--kobo-gray-light);
+        color: var(--kobo-text-secondary);
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .signature-pad-actions button:hover {
+        background: #e0e0e0;
+    }
+
+    /* Calculated field */
+    .calculated-display {
+        padding: 16px 20px;
+        background: #e8f5e9;
+        border: 1px solid #c8e6c9;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .calculated-value {
+        font-size: 28px;
+        font-weight: 500;
+        color: var(--kobo-success);
+    }
+
+    .calculated-label {
+        font-size: 12px;
+        color: var(--kobo-text-secondary);
+        margin-top: 4px;
+    }
+
+    /* Barcode input */
+    .barcode-input-group {
         display: flex;
         gap: 8px;
     }
 
-    .rating-btn {
-        width: 45px;
-        height: 45px;
-        border: 2px solid #dee2e6;
-        background: #fff;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .rating-btn:hover {
-        border-color: #ffc107;
-        background: #fff9e6;
-    }
-
-    .rating-btn.selected {
-        border-color: #ffc107;
-        background: #ffc107;
-        color: #212529;
-    }
-
-    /* Boolean field */
-    .boolean-group {
-        display: flex;
-        gap: 15px;
-    }
-
-    .boolean-btn {
+    .barcode-input-group input {
         flex: 1;
-        padding: 12px 20px;
-        border: 2px solid #dee2e6;
-        background: #fff;
-        border-radius: 8px;
-        font-weight: 500;
+    }
+
+    .barcode-scan-btn {
+        padding: 12px 16px;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        background: var(--kobo-gray-light);
+        color: var(--kobo-text);
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.2s;
+    }
+
+    .barcode-scan-btn:hover {
+        background: #e0e0e0;
+    }
+
+    /* Ranking field - Enketo style */
+    .rank-container {
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .rank-instructions {
+        padding: 10px 16px;
+        background: var(--kobo-gray-light);
+        font-size: 12px;
+        color: var(--kobo-text-secondary);
+        border-bottom: 1px solid var(--kobo-border);
+    }
+
+    .rank-list {
+        padding: 8px;
+    }
+
+    .rank-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        margin-bottom: 4px;
+        background: #fff;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        cursor: grab;
+        transition: all 0.2s;
+    }
+
+    .rank-item:hover {
+        border-color: var(--kobo-primary);
+        background: #f8f9fa;
+    }
+
+    .rank-item.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+
+    .rank-handle {
+        color: var(--kobo-gray);
+    }
+
+    .rank-position {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--kobo-primary);
+        color: white;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .rank-label {
+        flex: 1;
+        font-size: 14px;
+        color: var(--kobo-text);
+    }
+
+    /* Matrix/Grid field - Enketo style */
+    .matrix-container {
+        overflow-x: auto;
+    }
+
+    .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .matrix-table th {
+        padding: 12px 8px;
+        background: var(--kobo-gray-light);
+        border: 1px solid var(--kobo-border);
+        font-weight: 500;
+        font-size: 12px;
+        text-align: center;
+        color: var(--kobo-text-secondary);
+    }
+
+    .matrix-table td {
+        padding: 12px 8px;
+        border: 1px solid var(--kobo-border);
         text-align: center;
     }
 
-    .boolean-btn:hover {
-        border-color: #0d6efd;
-        background: #f0f6ff;
+    .matrix-row-label {
+        text-align: left !important;
+        font-weight: 400;
+        color: var(--kobo-text);
+        min-width: 150px;
     }
 
-    .boolean-btn.selected.yes {
-        border-color: #198754;
-        background: #198754;
-        color: white;
-    }
-
-    .boolean-btn.selected.no {
-        border-color: #dc3545;
-        background: #dc3545;
-        color: white;
-    }
-
-    /* Radio/Checkbox styling */
-    .choice-option {
-        padding: 10px 15px;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        margin-bottom: 8px;
+    .matrix-cell input[type="radio"] {
+        width: 18px;
+        height: 18px;
         cursor: pointer;
-        transition: all 0.2s ease;
     }
 
-    .choice-option:hover {
-        background: #f8f9fa;
-        border-color: #0d6efd;
+    /* Cascade select - Enketo style */
+    .cascade-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
 
-    .choice-option input:checked + .choice-label {
-        color: #0d6efd;
-        font-weight: 500;
+    .cascade-select {
+        transition: opacity 0.3s;
     }
 
-    .choice-option:has(input:checked) {
-        border-color: #0d6efd;
-        background: #f0f6ff;
+    /* Geotrace/Geoshape - Enketo style */
+    .geotrace-map, .geoshape-map {
+        height: 200px;
+        background: #e8f4e8;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--kobo-text-secondary);
     }
 
-    /* Location field */
-    .location-inputs {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
+    /* Acknowledge field - Enketo style */
+    .acknowledge-container {
+        padding: 8px 0;
     }
 
-    .get-location-btn {
-        margin-top: 10px;
+    .acknowledge-item {
+        padding: 16px 20px !important;
+        background: #e8f5e9;
+        border: 2px solid #c8e6c9 !important;
     }
 
-    /* Note field (display only) */
-    .note-field {
-        background: #e7f1ff;
-        border-left: 4px solid #0d6efd;
-        padding: 15px;
-        border-radius: 6px;
-        color: #084298;
-    }
-
-    /* Section header */
-    .section-header {
-        background: linear-gradient(135deg, #212529 0%, #495057 100%);
+    .acknowledge-item.selected {
+        background: var(--kobo-success);
+        border-color: var(--kobo-success) !important;
         color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        margin: 25px 0 20px 0;
     }
 
-    .section-header h5 {
-        margin: 0;
-        font-weight: 600;
+    /* Background audio - Enketo style */
+    .background-audio-container {
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        overflow: hidden;
     }
 
-    /* Navigation buttons */
-    .wizard-navigation {
+    .audio-recording-status {
+        padding: 16px;
+        background: var(--kobo-gray-light);
+        text-align: center;
+        color: var(--kobo-text-secondary);
+        font-size: 14px;
+    }
+
+    .audio-recording-status i {
+        margin-right: 8px;
+        color: var(--kobo-gray);
+    }
+
+    .audio-recording-status.recording {
+        background: #ffebee;
+        color: var(--kobo-danger);
+    }
+
+    .audio-recording-status.recording i {
+        color: var(--kobo-danger);
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Repeat group - Enketo style */
+    .repeat-container {
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        padding: 16px;
+        background: #fafafa;
+    }
+
+    .repeat-items {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .repeat-item {
+        padding: 16px;
+        background: white;
+        border: 1px solid var(--kobo-border);
+        border-radius: 4px;
+        position: relative;
+    }
+
+    .repeat-item-header {
         display: flex;
         justify-content: space-between;
-        padding-top: 20px;
-        border-top: 1px solid #e9ecef;
-        margin-top: 30px;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--kobo-border);
     }
 
-    .btn-wizard {
-        padding: 12px 30px;
+    .repeat-item-title {
         font-weight: 500;
-        border-radius: 8px;
+        color: var(--kobo-text);
     }
 
-    /* Page counter */
-    .page-counter {
-        text-align: center;
-        color: #6c757d;
-        font-size: 14px;
-        margin-bottom: 10px;
+    .repeat-item-remove {
+        padding: 4px 8px;
+        border: none;
+        background: none;
+        color: var(--kobo-danger);
+        cursor: pointer;
+        font-size: 16px;
     }
 
-    /* Signature canvas */
-    .signature-canvas {
-        border: 2px dashed #dee2e6;
-        border-radius: 8px;
-        background: #fff;
-        cursor: crosshair;
+    /* Validation message */
+    .validation-message {
+        display: none;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #ffebee;
+        border-left: 3px solid var(--kobo-danger);
+        border-radius: 0 4px 4px 0;
+        font-size: 13px;
+        color: var(--kobo-danger);
     }
 
-    /* Range slider */
-    .range-slider {
-        width: 100%;
-        height: 8px;
-        -webkit-appearance: none;
+    .question.invalid .validation-message {
+        display: block;
+    }
+
+    /* Form navigation - Enketo style */
+    .form-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 0;
+        margin-top: 24px;
+        border-top: 1px solid var(--kobo-border);
+    }
+
+    .nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border: none;
         border-radius: 4px;
-        background: #e9ecef;
-    }
-
-    .range-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #0d6efd;
+        font-size: 14px;
+        font-weight: 500;
         cursor: pointer;
+        transition: all 0.2s;
     }
 
-    .range-value {
-        text-align: center;
-        font-weight: 600;
-        font-size: 18px;
-        color: #0d6efd;
-        margin-top: 10px;
+    .nav-btn.prev {
+        background: #fff;
+        border: 1px solid var(--kobo-border);
+        color: var(--kobo-text);
     }
 
-    /* File upload styling */
-    .file-upload-wrapper {
-        border: 2px dashed #dee2e6;
-        border-radius: 8px;
-        padding: 30px;
-        text-align: center;
-        transition: all 0.2s ease;
-        cursor: pointer;
+    .nav-btn.prev:hover {
+        background: var(--kobo-gray-light);
     }
 
-    .file-upload-wrapper:hover {
-        border-color: #0d6efd;
-        background: #f8f9fa;
+    .nav-btn.next {
+        background: var(--kobo-primary);
+        color: white;
     }
 
-    .file-upload-wrapper.dragover {
-        border-color: #0d6efd;
-        background: #e7f1ff;
+    .nav-btn.next:hover {
+        background: var(--kobo-primary-dark);
     }
 
-    .file-upload-icon {
-        font-size: 40px;
-        color: #6c757d;
-        margin-bottom: 10px;
+    .nav-btn.submit {
+        background: var(--kobo-success);
+        color: white;
     }
 
-    /* Calculated field */
-    .calculated-field {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        font-size: 18px;
-        font-weight: 600;
-        color: #198754;
-        text-align: center;
+    .nav-btn.submit:hover {
+        background: #43a047;
     }
 
-    /* Responsive */
+    .nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Mobile responsive */
     @media (max-width: 768px) {
-        .wizard-progress {
-            overflow-x: auto;
-            padding-bottom: 10px;
+        .enketo-form {
+            margin: 0;
         }
 
-        .wizard-step-label {
-            font-size: 10px;
-            max-width: 60px;
+        .form-header {
+            padding: 16px 20px;
+            margin: -1rem -1rem 0 -1rem;
         }
 
-        .location-inputs {
-            grid-template-columns: 1fr;
+        .form-header h1 {
+            font-size: 18px;
         }
 
-        .boolean-group {
+        .progress-container {
+            padding: 10px 16px;
+        }
+
+        .page-tabs {
+            padding: 10px 16px;
+        }
+
+        .form-page {
+            padding: 16px 0;
+        }
+
+        .question {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+        }
+
+        .option-list.horizontal {
             flex-direction: column;
+        }
+
+        .yesno-toggle {
+            max-width: 100%;
+        }
+
+        .rating-scale {
+            flex-wrap: wrap;
+        }
+
+        .rating-option {
+            min-width: calc(20% - 1px);
+        }
+
+        .form-navigation {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* Print styles */
+    @media print {
+        .progress-container,
+        .page-tabs,
+        .form-navigation {
+            display: none;
+        }
+
+        .form-page {
+            display: block !important;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h2><i class="fas fa-edit"></i> {{ assignment.form_template.name }}</h2>
-                    <p class="text-muted mb-0">{{ assignment.form_template.description|default:"Complete the form below" }}</p>
-                </div>
-                <div>
-                    <a href="{% url 'forms:my_assignments' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Assignments
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-9">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <form method="post" id="wizardForm" enctype="multipart/form-data">
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7 p-0 p-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-3 p-md-4">
+                    <form method="post" id="enketoForm" enctype="multipart/form-data">
                         {% csrf_token %}
 
-                        <div class="form-wizard">
-                            <!-- Progress indicator -->
-                            <div class="wizard-progress" id="wizardProgress">
-                                <!-- Steps will be generated by JavaScript -->
+                        <div class="enketo-form">
+                            <!-- Form Header - Kobo style -->
+                            <div class="form-header">
+                                <h1>{{ assignment.form_template.name }}</h1>
+                                <p class="form-description">{{ assignment.form_template.description|default:"Complete all required fields" }}</p>
                             </div>
-                            <div class="page-counter" id="pageCounter"></div>
 
-                            <!-- Form pages container -->
+                            <!-- Progress Bar - Kobo style -->
+                            <div class="progress-container">
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-track">
+                                        <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+                                    </div>
+                                    <span class="progress-text" id="progressText">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Page Tabs - Kobo style -->
+                            <div class="page-tabs" id="pageTabs">
+                                <!-- Generated by JavaScript -->
+                            </div>
+
+                            <!-- Form Pages Container -->
                             <div id="formPagesContainer">
-                                <!-- Pages will be generated by JavaScript -->
+                                <!-- Generated by JavaScript -->
                             </div>
 
-                            <!-- Navigation buttons -->
-                            <div class="wizard-navigation">
-                                <button type="button" class="btn btn-outline-secondary btn-wizard" id="prevBtn" onclick="navigatePage(-1)" style="display: none;">
+                            <!-- Navigation - Kobo style -->
+                            <div class="form-navigation">
+                                <button type="button" class="nav-btn prev" id="prevBtn" onclick="navigatePage(-1)" style="display: none;">
                                     <i class="fas fa-chevron-left"></i> Previous
                                 </button>
-                                <div class="flex-grow-1"></div>
-                                <button type="button" class="btn btn-primary btn-wizard" id="nextBtn" onclick="navigatePage(1)">
+                                <div style="flex: 1;"></div>
+                                <button type="button" class="nav-btn next" id="nextBtn" onclick="navigatePage(1)">
                                     Next <i class="fas fa-chevron-right"></i>
                                 </button>
-                                <button type="submit" class="btn btn-success btn-wizard" id="submitBtn" style="display: none;">
-                                    <i class="fas fa-check"></i> Submit Form
+                                <button type="submit" class="nav-btn submit" id="submitBtn" style="display: none;">
+                                    <i class="fas fa-paper-plane"></i> Submit
                                 </button>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-3">
-            <!-- Assignment Info Card -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0"><i class="fas fa-info-circle text-primary"></i> Assignment Info</h6>
-                </div>
-                <div class="card-body">
-                    {% if assignment.household %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Household</small>
-                        <strong>{{ assignment.household.name }}</strong>
+            <!-- Assignment Info - Compact footer -->
+            <div class="card mt-3 border-0 bg-light">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted">
+                        {% if assignment.household %}
+                        <span><i class="fas fa-home me-1"></i> {{ assignment.household.name }}</span>
+                        {% endif %}
+                        {% if assignment.business_group %}
+                        <span><i class="fas fa-users me-1"></i> {{ assignment.business_group.name }}</span>
+                        {% endif %}
+                        <span><i class="fas fa-calendar me-1"></i> Due: {{ assignment.due_date|date:"M d, Y"|default:"No deadline" }}</span>
+                        <a href="{% url 'forms:my_assignments' %}" class="text-primary">
+                            <i class="fas fa-arrow-left me-1"></i> Back
+                        </a>
                     </div>
-                    {% endif %}
-                    {% if assignment.business_group %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Business Group</small>
-                        <strong>{{ assignment.business_group.name }}</strong>
-                    </div>
-                    {% endif %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Due Date</small>
-                        <strong>{{ assignment.due_date|date:"M d, Y"|default:"No deadline" }}</strong>
-                    </div>
-                    <div>
-                        <small class="text-muted d-block">Assigned By</small>
-                        <strong>{{ assignment.assigned_by.get_full_name }}</strong>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Form Progress Card -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0"><i class="fas fa-tasks text-success"></i> Progress</h6>
-                </div>
-                <div class="card-body">
-                    <div class="progress mb-2" style="height: 8px;">
-                        <div class="progress-bar bg-success" id="overallProgress" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <small class="text-muted"><span id="completedFields">0</span> of <span id="totalFields">0</span> fields completed</small>
                 </div>
             </div>
         </div>
@@ -535,17 +1157,18 @@
     ];
 
     // Configuration
-    const FIELDS_PER_PAGE = 6; // Number of fields per page (can be overridden by sections)
+    const FIELDS_PER_PAGE = 8;
     let currentPage = 0;
     let pages = [];
-    let formData = {};
+    let questionNumber = 0;
 
-    // Initialize the form wizard
+    // Initialize the form
     document.addEventListener('DOMContentLoaded', function() {
         buildFormPages();
-        renderWizard();
+        renderEnketoForm();
         updateNavigation();
         setupFormValidation();
+        updateProgress();
     });
 
     // Build form pages - group fields into pages
@@ -556,28 +1179,17 @@
         let pageCount = 1;
 
         formFields.forEach((field, index) => {
-            // Section and group fields mark new pages
             if (field.type === 'section' || field.type === 'group') {
-                // Save current page if it has fields
                 if (currentPageFields.length > 0) {
-                    pages.push({
-                        title: currentPageTitle,
-                        fields: currentPageFields
-                    });
+                    pages.push({ title: currentPageTitle, fields: currentPageFields });
                 }
-                // Start new page with section title
                 currentPageTitle = field.label || `Page ${pageCount + 1}`;
                 currentPageFields = [];
                 pageCount++;
             } else {
                 currentPageFields.push(field);
-
-                // Auto-paginate if too many fields
                 if (currentPageFields.length >= FIELDS_PER_PAGE) {
-                    pages.push({
-                        title: currentPageTitle,
-                        fields: currentPageFields
-                    });
+                    pages.push({ title: currentPageTitle, fields: currentPageFields });
                     pageCount++;
                     currentPageTitle = `Page ${pageCount}`;
                     currentPageFields = [];
@@ -585,101 +1197,77 @@
             }
         });
 
-        // Add remaining fields
         if (currentPageFields.length > 0) {
-            pages.push({
-                title: currentPageTitle,
-                fields: currentPageFields
-            });
+            pages.push({ title: currentPageTitle, fields: currentPageFields });
         }
 
-        // Ensure at least one page
         if (pages.length === 0) {
-            pages.push({
-                title: 'Form',
-                fields: []
-            });
+            pages.push({ title: 'Form', fields: [] });
         }
     }
 
-    // Render the wizard UI
-    function renderWizard() {
-        renderProgressSteps();
+    // Render the Enketo-style form
+    function renderEnketoForm() {
+        renderPageTabs();
         renderFormPages();
-        updatePageCounter();
-        updateOverallProgress();
     }
 
-    // Render progress steps
-    function renderProgressSteps() {
-        const container = document.getElementById('wizardProgress');
+    // Render page tabs - Kobo style
+    function renderPageTabs() {
+        const container = document.getElementById('pageTabs');
 
-        // Only show progress bar if more than 1 page
         if (pages.length <= 1) {
             container.style.display = 'none';
             return;
         }
 
-        // Calculate progress bar width
-        const progressWidth = pages.length > 1 ? (currentPage / (pages.length - 1)) * 100 : 0;
-
-        let html = `<div class="wizard-progress-bar" style="width: calc(${progressWidth}% - 60px * ${progressWidth / 100});"></div>`;
-
-        pages.forEach((page, index) => {
+        container.innerHTML = pages.map((page, index) => {
             const isActive = index === currentPage;
             const isCompleted = index < currentPage;
-            const statusClass = isActive ? 'active' : (isCompleted ? 'completed' : '');
+            let classes = 'page-tab';
+            if (isActive) classes += ' active';
+            if (isCompleted) classes += ' completed';
 
-            html += `
-                <div class="wizard-step ${statusClass}" onclick="goToPage(${index})" title="${page.title}">
-                    <div class="wizard-step-number">
-                        ${isCompleted ? '<i class="fas fa-check"></i>' : (index + 1)}
-                    </div>
-                    <span class="wizard-step-label">${page.title}</span>
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
+            return `<button type="button" class="${classes}" onclick="goToPage(${index})">${page.title}</button>`;
+        }).join('');
     }
 
-    // Render form pages
+    // Render form pages with Enketo-style questions
     function renderFormPages() {
         const container = document.getElementById('formPagesContainer');
-        let html = '';
+        questionNumber = 0;
 
-        pages.forEach((page, pageIndex) => {
+        container.innerHTML = pages.map((page, pageIndex) => {
             const isActive = pageIndex === currentPage;
-            html += `
+            return `
                 <div class="form-page ${isActive ? 'active' : ''}" id="page-${pageIndex}">
-                    <div class="form-page-header">
-                        <h4><i class="fas fa-clipboard-list me-2"></i>${page.title}</h4>
-                        ${page.fields.length > 0 ? `<p>${page.fields.length} field${page.fields.length > 1 ? 's' : ''} on this page</p>` : ''}
-                    </div>
-                    ${page.fields.map(field => renderField(field)).join('')}
+                    ${page.fields.map(field => renderEnketoField(field)).join('')}
                 </div>
             `;
-        });
+        }).join('');
 
-        container.innerHTML = html;
-
-        // Initialize special field types
         initializeSpecialFields();
     }
 
-    // Render individual field based on type
-    function renderField(field) {
-        const requiredMark = field.required ? '<span class="field-required">*</span>' : '';
-        const helpText = field.helpText ? `<div class="field-help-text"><i class="fas fa-info-circle me-1"></i>${field.helpText}</div>` : '';
-        const conditionalAttr = field.showIfField ? `data-show-if-field="${field.showIfField}" data-show-if-value="${field.showIfValue}"` : '';
+    // Render individual field in Enketo style
+    function renderEnketoField(field) {
+        // Skip section/group types as they're used for page breaks
+        if (field.type === 'section' || field.type === 'group') {
+            return '';
+        }
 
-        let fieldHtml = '';
+        questionNumber++;
+        const conditionalAttr = field.showIfField ? `data-show-if-field="${field.showIfField}" data-show-if-value="${field.showIfValue}"` : '';
+        const requiredHtml = field.required ? '<span class="required-indicator">*</span><span class="required-text">required</span>' : '';
+        const hintHtml = field.helpText ? `<span class="question-hint">${field.helpText}</span>` : '';
+
+        let inputHtml = '';
 
         switch(field.type) {
             case 'text':
-                fieldHtml = `
-                    <input type="text" class="form-control" id="field_${field.id}" name="field_${field.id}"
-                        placeholder="${field.placeholder || ''}"
+                inputHtml = `
+                    <input type="text" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || 'Enter your answer'}"
                         ${field.required ? 'required' : ''}
                         ${field.maxLength ? `maxlength="${field.maxLength}"` : ''}
                         value="${field.defaultValue || ''}">
@@ -687,9 +1275,9 @@
                 break;
 
             case 'textarea':
-                fieldHtml = `
-                    <textarea class="form-control" id="field_${field.id}" name="field_${field.id}"
-                        rows="4" placeholder="${field.placeholder || ''}"
+                inputHtml = `
+                    <textarea class="enketo-input" id="field_${field.id}" name="field_${field.id}"
+                        rows="4" placeholder="${field.placeholder || 'Enter your answer'}"
                         ${field.required ? 'required' : ''}
                         ${field.maxLength ? `maxlength="${field.maxLength}"` : ''}>${field.defaultValue || ''}</textarea>
                 `;
@@ -697,17 +1285,17 @@
 
             case 'note':
                 return `
-                    <div class="form-field-container" ${conditionalAttr}>
-                        <div class="note-field">
+                    <div class="question" ${conditionalAttr} id="container_${field.id}">
+                        <div class="note-content">
                             <i class="fas fa-info-circle me-2"></i>${field.label}
                         </div>
                     </div>
                 `;
 
             case 'number':
-                fieldHtml = `
-                    <input type="number" class="form-control" id="field_${field.id}" name="field_${field.id}"
-                        placeholder="${field.placeholder || ''}"
+                inputHtml = `
+                    <input type="number" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || 'Enter a number'}"
                         ${field.required ? 'required' : ''}
                         ${field.minValue !== null ? `min="${field.minValue}"` : ''}
                         ${field.maxValue !== null ? `max="${field.maxValue}"` : ''}
@@ -716,9 +1304,9 @@
                 break;
 
             case 'decimal':
-                fieldHtml = `
-                    <input type="number" step="0.01" class="form-control" id="field_${field.id}" name="field_${field.id}"
-                        placeholder="${field.placeholder || ''}"
+                inputHtml = `
+                    <input type="number" step="0.01" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || 'Enter a decimal number'}"
                         ${field.required ? 'required' : ''}
                         ${field.minValue !== null ? `min="${field.minValue}"` : ''}
                         ${field.maxValue !== null ? `max="${field.maxValue}"` : ''}
@@ -727,18 +1315,18 @@
                 break;
 
             case 'calculate':
-                fieldHtml = `
-                    <div class="calculated-field" id="field_${field.id}">
-                        <i class="fas fa-calculator me-2"></i>
-                        <span id="calculated_value_${field.id}">--</span>
+                inputHtml = `
+                    <div class="calculated-display">
+                        <div class="calculated-value" id="calculated_value_${field.id}">--</div>
+                        <div class="calculated-label">Calculated value</div>
                     </div>
-                    <input type="hidden" name="field_${field.id}" id="field_hidden_${field.id}">
+                    <input type="hidden" name="field_${field.id}" id="field_${field.id}">
                 `;
                 break;
 
             case 'email':
-                fieldHtml = `
-                    <input type="email" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                inputHtml = `
+                    <input type="email" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
                         placeholder="${field.placeholder || 'email@example.com'}"
                         ${field.required ? 'required' : ''}
                         value="${field.defaultValue || ''}">
@@ -746,50 +1334,47 @@
                 break;
 
             case 'phone':
-                fieldHtml = `
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                        <input type="tel" class="form-control" id="field_${field.id}" name="field_${field.id}"
-                            placeholder="${field.placeholder || '07XXXXXXXX'}"
-                            pattern="^(07|01)[0-9]{8}$"
-                            ${field.required ? 'required' : ''}
-                            value="${field.defaultValue || ''}">
-                    </div>
-                    <small class="text-muted">Kenya format: 07XXXXXXXX or 01XXXXXXXX</small>
+                inputHtml = `
+                    <input type="tel" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || '07XXXXXXXX'}"
+                        pattern="^(07|01)[0-9]{8}$"
+                        ${field.required ? 'required' : ''}
+                        value="${field.defaultValue || ''}">
+                    <span class="question-hint">Kenya format: 07XXXXXXXX or 01XXXXXXXX</span>
                 `;
                 break;
 
             case 'date':
-                fieldHtml = `
-                    <input type="date" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                inputHtml = `
+                    <input type="date" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
                         value="${field.defaultValue || ''}">
                 `;
                 break;
 
             case 'time':
-                fieldHtml = `
-                    <input type="time" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                inputHtml = `
+                    <input type="time" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
                         value="${field.defaultValue || ''}">
                 `;
                 break;
 
             case 'datetime':
-                fieldHtml = `
-                    <input type="datetime-local" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                inputHtml = `
+                    <input type="datetime-local" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
                         value="${field.defaultValue || ''}">
                 `;
                 break;
 
             case 'select':
-                const options = Array.isArray(field.choices) ? field.choices : [];
-                fieldHtml = `
-                    <select class="form-select" id="field_${field.id}" name="field_${field.id}"
+                const selectOptions = Array.isArray(field.choices) ? field.choices : [];
+                inputHtml = `
+                    <select class="enketo-select" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}>
-                        <option value="">-- Select an option --</option>
-                        ${options.map(opt => {
+                        <option value="">Select an option...</option>
+                        ${selectOptions.map(opt => {
                             const value = typeof opt === 'object' ? opt.value : opt;
                             const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
                             return `<option value="${value}">${label}</option>`;
@@ -800,16 +1385,16 @@
 
             case 'radio':
                 const radioOptions = Array.isArray(field.choices) ? field.choices : [];
-                fieldHtml = `
-                    <div class="radio-options">
+                const isHorizontal = radioOptions.length <= 4;
+                inputHtml = `
+                    <div class="option-list ${isHorizontal ? 'horizontal' : ''}">
                         ${radioOptions.map((opt, idx) => {
                             const value = typeof opt === 'object' ? opt.value : opt;
                             const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
                             return `
-                                <label class="choice-option d-flex align-items-center">
-                                    <input type="radio" class="form-check-input me-3" name="field_${field.id}" value="${value}"
-                                        ${field.required && idx === 0 ? '' : ''}>
-                                    <span class="choice-label">${label}</span>
+                                <label class="option-item" onclick="this.classList.add('selected'); this.parentNode.querySelectorAll('.option-item').forEach(el => el !== this && el.classList.remove('selected'));">
+                                    <input type="radio" name="field_${field.id}" value="${value}" ${field.required && idx === 0 ? '' : ''}>
+                                    <span class="option-label">${label}</span>
                                 </label>
                             `;
                         }).join('')}
@@ -820,49 +1405,45 @@
             case 'checkbox':
                 const checkOptions = Array.isArray(field.choices) ? field.choices : [];
                 if (checkOptions.length > 0) {
-                    fieldHtml = `
-                        <div class="checkbox-options">
+                    inputHtml = `
+                        <div class="option-list">
                             ${checkOptions.map(opt => {
                                 const value = typeof opt === 'object' ? opt.value : opt;
                                 const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
                                 return `
-                                    <label class="choice-option d-flex align-items-center">
-                                        <input type="checkbox" class="form-check-input me-3" name="field_${field.id}" value="${value}">
-                                        <span class="choice-label">${label}</span>
+                                    <label class="option-item" onclick="this.classList.toggle('selected');">
+                                        <input type="checkbox" name="field_${field.id}" value="${value}">
+                                        <span class="option-label">${label}</span>
                                     </label>
                                 `;
                             }).join('')}
                         </div>
                     `;
                 } else {
-                    fieldHtml = `
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="field_${field.id}" name="field_${field.id}" value="yes">
-                            <label class="form-check-label" for="field_${field.id}">Yes</label>
-                        </div>
+                    inputHtml = `
+                        <label class="option-item" onclick="this.classList.toggle('selected');">
+                            <input type="checkbox" id="field_${field.id}" name="field_${field.id}" value="yes">
+                            <span class="option-label">Yes</span>
+                        </label>
                     `;
                 }
                 break;
 
             case 'boolean':
-                fieldHtml = `
-                    <div class="boolean-group">
-                        <button type="button" class="boolean-btn yes" data-value="yes" onclick="selectBoolean(this, ${field.id})">
-                            <i class="fas fa-check me-2"></i>Yes
-                        </button>
-                        <button type="button" class="boolean-btn no" data-value="no" onclick="selectBoolean(this, ${field.id})">
-                            <i class="fas fa-times me-2"></i>No
-                        </button>
+                inputHtml = `
+                    <div class="yesno-toggle">
+                        <button type="button" class="yesno-btn" data-value="yes" onclick="selectYesNo(this, ${field.id})">Yes</button>
+                        <button type="button" class="yesno-btn" data-value="no" onclick="selectYesNo(this, ${field.id})">No</button>
                     </div>
                     <input type="hidden" id="field_${field.id}" name="field_${field.id}" ${field.required ? 'required' : ''}>
                 `;
                 break;
 
             case 'rating':
-                fieldHtml = `
-                    <div class="rating-group">
+                inputHtml = `
+                    <div class="rating-scale">
                         ${[1, 2, 3, 4, 5].map(num => `
-                            <button type="button" class="rating-btn" data-value="${num}" onclick="selectRating(this, ${field.id})">
+                            <button type="button" class="rating-option" data-value="${num}" onclick="selectRating(this, ${field.id})">
                                 ${num}
                             </button>
                         `).join('')}
@@ -875,134 +1456,288 @@
                 const minVal = field.minValue !== null ? field.minValue : 0;
                 const maxVal = field.maxValue !== null ? field.maxValue : 100;
                 const defaultVal = field.defaultValue || Math.round((minVal + maxVal) / 2);
-                fieldHtml = `
-                    <input type="range" class="range-slider" id="field_${field.id}" name="field_${field.id}"
-                        min="${minVal}" max="${maxVal}" value="${defaultVal}"
-                        oninput="updateRangeValue(this)">
-                    <div class="d-flex justify-content-between text-muted small">
-                        <span>${minVal}</span>
-                        <span>${maxVal}</span>
+                inputHtml = `
+                    <div class="range-container">
+                        <input type="range" class="enketo-range" id="field_${field.id}" name="field_${field.id}"
+                            min="${minVal}" max="${maxVal}" value="${defaultVal}"
+                            oninput="updateRangeValue(this)">
+                        <div class="range-labels">
+                            <span>${minVal}</span>
+                            <span>${maxVal}</span>
+                        </div>
+                        <div class="range-current" id="range_value_${field.id}">${defaultVal}</div>
                     </div>
-                    <div class="range-value" id="range_value_${field.id}">${defaultVal}</div>
                 `;
                 break;
 
             case 'location':
-                fieldHtml = `
-                    <div class="location-inputs">
-                        <div>
-                            <label class="small text-muted">Latitude</label>
-                            <input type="number" step="0.000001" class="form-control" id="field_${field.id}_lat" name="field_${field.id}_lat" placeholder="Latitude">
+                inputHtml = `
+                    <div class="geopoint-container">
+                        <div class="geopoint-display" id="geopoint_display_${field.id}">
+                            <div class="coords" id="geopoint_coords_${field.id}">No location captured</div>
+                            <div class="accuracy" id="geopoint_accuracy_${field.id}"></div>
                         </div>
-                        <div>
-                            <label class="small text-muted">Longitude</label>
-                            <input type="number" step="0.000001" class="form-control" id="field_${field.id}_lng" name="field_${field.id}_lng" placeholder="Longitude">
-                        </div>
+                        <button type="button" class="geopoint-btn" id="geopoint_btn_${field.id}" onclick="getLocation(${field.id})">
+                            <i class="fas fa-map-marker-alt"></i> Capture Location
+                        </button>
                     </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm get-location-btn" onclick="getLocation(${field.id})">
-                        <i class="fas fa-map-marker-alt me-1"></i> Get Current Location
-                    </button>
+                    <input type="hidden" id="field_${field.id}_lat" name="field_${field.id}_lat">
+                    <input type="hidden" id="field_${field.id}_lng" name="field_${field.id}_lng">
                 `;
                 break;
 
             case 'file':
-                fieldHtml = `
-                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                inputHtml = `
+                    <div class="file-upload" onclick="document.getElementById('field_${field.id}').click()">
                         <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                        <p class="mb-1">Click to upload or drag and drop</p>
-                        <small class="text-muted">Any file type</small>
+                        <div class="file-upload-text">Click to upload file</div>
+                        <div class="file-upload-hint">Any file type</div>
                     </div>
                     <input type="file" class="d-none" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
-                        onchange="showFileName(this)">
-                    <div id="file_name_${field.id}" class="mt-2 text-success small"></div>
+                        onchange="showFilePreview(this, ${field.id})">
+                    <div id="file_preview_${field.id}"></div>
                 `;
                 break;
 
             case 'image':
-                fieldHtml = `
-                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                inputHtml = `
+                    <div class="file-upload" onclick="document.getElementById('field_${field.id}').click()">
                         <div class="file-upload-icon"><i class="fas fa-camera"></i></div>
-                        <p class="mb-1">Click to upload or take a photo</p>
-                        <small class="text-muted">JPG, PNG, GIF up to 10MB</small>
+                        <div class="file-upload-text">Click to take photo or upload</div>
+                        <div class="file-upload-hint">JPG, PNG, GIF up to 10MB</div>
                     </div>
                     <input type="file" accept="image/*" capture="environment" class="d-none" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
-                        onchange="previewImage(this)">
-                    <div id="image_preview_${field.id}" class="mt-2"></div>
+                        onchange="showImagePreview(this, ${field.id})">
+                    <div id="file_preview_${field.id}"></div>
                 `;
                 break;
 
             case 'audio':
-                fieldHtml = `
-                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                inputHtml = `
+                    <div class="file-upload" onclick="document.getElementById('field_${field.id}').click()">
                         <div class="file-upload-icon"><i class="fas fa-microphone"></i></div>
-                        <p class="mb-1">Click to upload audio recording</p>
-                        <small class="text-muted">MP3, WAV, M4A</small>
+                        <div class="file-upload-text">Click to upload audio</div>
+                        <div class="file-upload-hint">MP3, WAV, M4A</div>
                     </div>
                     <input type="file" accept="audio/*" class="d-none" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
-                        onchange="showFileName(this)">
-                    <div id="file_name_${field.id}" class="mt-2 text-success small"></div>
+                        onchange="showFilePreview(this, ${field.id})">
+                    <div id="file_preview_${field.id}"></div>
                 `;
                 break;
 
             case 'video':
-                fieldHtml = `
-                    <div class="file-upload-wrapper" onclick="document.getElementById('field_${field.id}').click()">
+                inputHtml = `
+                    <div class="file-upload" onclick="document.getElementById('field_${field.id}').click()">
                         <div class="file-upload-icon"><i class="fas fa-video"></i></div>
-                        <p class="mb-1">Click to upload video</p>
-                        <small class="text-muted">MP4, MOV, AVI</small>
+                        <div class="file-upload-text">Click to upload video</div>
+                        <div class="file-upload-hint">MP4, MOV, AVI</div>
                     </div>
                     <input type="file" accept="video/*" class="d-none" id="field_${field.id}" name="field_${field.id}"
                         ${field.required ? 'required' : ''}
-                        onchange="showFileName(this)">
-                    <div id="file_name_${field.id}" class="mt-2 text-success small"></div>
+                        onchange="showFilePreview(this, ${field.id})">
+                    <div id="file_preview_${field.id}"></div>
                 `;
                 break;
 
             case 'signature':
-                fieldHtml = `
-                    <canvas id="signature_canvas_${field.id}" class="signature-canvas" width="400" height="150"></canvas>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSignature(${field.id})">
-                            <i class="fas fa-eraser me-1"></i> Clear
-                        </button>
+                inputHtml = `
+                    <div class="signature-pad">
+                        <canvas id="signature_canvas_${field.id}" width="400" height="150"></canvas>
+                        <div class="signature-pad-actions">
+                            <button type="button" onclick="clearSignature(${field.id})">
+                                <i class="fas fa-eraser me-1"></i> Clear
+                            </button>
+                        </div>
                     </div>
                     <input type="hidden" id="field_${field.id}" name="field_${field.id}" ${field.required ? 'required' : ''}>
                 `;
                 break;
 
             case 'barcode':
-                fieldHtml = `
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-barcode"></i></span>
-                        <input type="text" class="form-control" id="field_${field.id}" name="field_${field.id}"
+                inputHtml = `
+                    <div class="barcode-input-group">
+                        <input type="text" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
                             placeholder="Scan or enter barcode/QR code"
                             ${field.required ? 'required' : ''}>
-                        <button type="button" class="btn btn-outline-secondary" onclick="scanBarcode(${field.id})">
-                            <i class="fas fa-qrcode"></i> Scan
+                        <button type="button" class="barcode-scan-btn" onclick="scanBarcode(${field.id})">
+                            <i class="fas fa-qrcode"></i>
+                        </button>
+                    </div>
+                `;
+                break;
+
+            case 'rank':
+                const rankOptions = Array.isArray(field.choices) ? field.choices : [];
+                inputHtml = `
+                    <div class="rank-container" id="rank_container_${field.id}">
+                        <div class="rank-instructions">Drag items to reorder</div>
+                        <div class="rank-list" id="rank_list_${field.id}">
+                            ${rankOptions.map((opt, idx) => {
+                                const value = typeof opt === 'object' ? opt.value : opt;
+                                const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+                                return `
+                                    <div class="rank-item" draggable="true" data-value="${value}">
+                                        <span class="rank-handle"><i class="fas fa-grip-vertical"></i></span>
+                                        <span class="rank-position">${idx + 1}</span>
+                                        <span class="rank-label">${label}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}" ${field.required ? 'required' : ''}>
+                `;
+                break;
+
+            case 'matrix':
+                const matrixChoices = Array.isArray(field.choices) ? field.choices : [];
+                inputHtml = `
+                    <div class="matrix-container">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    ${['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map(h => `<th>${h}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${matrixChoices.map((opt, idx) => {
+                                    const label = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+                                    return `
+                                        <tr>
+                                            <td class="matrix-row-label">${label}</td>
+                                            ${[1, 2, 3, 4, 5].map(v => `
+                                                <td class="matrix-cell">
+                                                    <input type="radio" name="field_${field.id}_${idx}" value="${v}">
+                                                </td>
+                                            `).join('')}
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                break;
+
+            case 'cascade':
+                inputHtml = `
+                    <div class="cascade-container">
+                        <select class="enketo-select cascade-select" id="field_${field.id}_level1" name="field_${field.id}_level1"
+                            onchange="loadCascadeLevel(${field.id}, 2, this.value)">
+                            <option value="">Select first level...</option>
+                        </select>
+                        <select class="enketo-select cascade-select" id="field_${field.id}_level2" name="field_${field.id}_level2"
+                            style="display:none;" onchange="loadCascadeLevel(${field.id}, 3, this.value)">
+                            <option value="">Select second level...</option>
+                        </select>
+                        <select class="enketo-select cascade-select" id="field_${field.id}" name="field_${field.id}"
+                            style="display:none;" ${field.required ? 'required' : ''}>
+                            <option value="">Select final level...</option>
+                        </select>
+                    </div>
+                `;
+                break;
+
+            case 'geotrace':
+                inputHtml = `
+                    <div class="geopoint-container">
+                        <div class="geopoint-display" id="geotrace_display_${field.id}">
+                            <div class="coords"><i class="fas fa-route me-2"></i>No path recorded</div>
+                            <div class="accuracy" id="geotrace_points_${field.id}">0 points</div>
+                        </div>
+                        <button type="button" class="geopoint-btn" id="geotrace_btn_${field.id}" onclick="startGeotrace(${field.id})">
+                            <i class="fas fa-play"></i> Start Recording Path
+                        </button>
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}">
+                `;
+                break;
+
+            case 'geoshape':
+                inputHtml = `
+                    <div class="geopoint-container">
+                        <div class="geopoint-display" id="geoshape_display_${field.id}">
+                            <div class="coords"><i class="fas fa-draw-polygon me-2"></i>No area recorded</div>
+                            <div class="accuracy" id="geoshape_points_${field.id}">0 points</div>
+                        </div>
+                        <button type="button" class="geopoint-btn" id="geoshape_btn_${field.id}" onclick="startGeoshape(${field.id})">
+                            <i class="fas fa-play"></i> Start Recording Area
+                        </button>
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}">
+                `;
+                break;
+
+            case 'acknowledge':
+                inputHtml = `
+                    <div class="acknowledge-container">
+                        <label class="option-item acknowledge-item" onclick="this.classList.toggle('selected');">
+                            <input type="checkbox" id="field_${field.id}" name="field_${field.id}" value="acknowledged"
+                                ${field.required ? 'required' : ''}>
+                            <span class="option-label"><i class="fas fa-thumbs-up me-2"></i>I acknowledge</span>
+                        </label>
+                    </div>
+                `;
+                break;
+
+            case 'hidden':
+                inputHtml = `
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}" value="${field.defaultValue || ''}">
+                `;
+                // Return empty for hidden fields - no visible element
+                return `<input type="hidden" id="field_${field.id}" name="field_${field.id}" value="${field.defaultValue || ''}">`;
+
+            case 'background_audio':
+                inputHtml = `
+                    <div class="background-audio-container">
+                        <div class="audio-recording-status" id="bg_audio_status_${field.id}">
+                            <i class="fas fa-microphone-alt"></i>
+                            <span>Background audio will record during form completion</span>
+                        </div>
+                        <button type="button" class="geopoint-btn" id="bg_audio_btn_${field.id}" onclick="toggleBackgroundAudio(${field.id})">
+                            <i class="fas fa-microphone-alt"></i> Enable Background Recording
+                        </button>
+                    </div>
+                    <input type="hidden" id="field_${field.id}" name="field_${field.id}">
+                `;
+                break;
+
+            case 'repeat':
+                inputHtml = `
+                    <div class="repeat-container" id="repeat_container_${field.id}">
+                        <div class="repeat-items" id="repeat_items_${field.id}">
+                            <!-- Repeat items will be added here -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addRepeatItem(${field.id})">
+                            <i class="fas fa-plus me-1"></i> Add Entry
                         </button>
                     </div>
                 `;
                 break;
 
             default:
-                fieldHtml = `
-                    <input type="text" class="form-control" id="field_${field.id}" name="field_${field.id}"
-                        placeholder="${field.placeholder || ''}"
+                inputHtml = `
+                    <input type="text" class="enketo-input" id="field_${field.id}" name="field_${field.id}"
+                        placeholder="${field.placeholder || 'Enter your answer'}"
                         ${field.required ? 'required' : ''}
                         value="${field.defaultValue || ''}">
                 `;
         }
 
         return `
-            <div class="form-field-container" ${conditionalAttr} id="container_${field.id}">
-                <label class="field-label" for="field_${field.id}">
-                    ${field.label}${requiredMark}
+            <div class="question" ${conditionalAttr} id="container_${field.id}">
+                <label class="question-label" for="field_${field.id}">
+                    <span class="question-number">${questionNumber}</span>
+                    ${field.label}
+                    ${requiredHtml}
                 </label>
-                ${fieldHtml}
-                ${helpText}
+                ${hintHtml}
+                ${inputHtml}
+                <div class="validation-message">This field is required</div>
             </div>
         `;
     }
@@ -1010,7 +1745,7 @@
     // Initialize special field interactions
     function initializeSpecialFields() {
         // Initialize signature canvases
-        document.querySelectorAll('.signature-canvas').forEach(canvas => {
+        document.querySelectorAll('.signature-pad canvas').forEach(canvas => {
             initSignatureCanvas(canvas);
         });
 
@@ -1028,9 +1763,10 @@
         let lastX = 0;
         let lastY = 0;
 
-        ctx.strokeStyle = '#000';
+        ctx.strokeStyle = '#212121';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
@@ -1067,7 +1803,6 @@
             ctx.stroke();
             [lastX, lastY] = [e.offsetX, e.offsetY];
 
-            // Save signature data
             const fieldId = canvas.id.replace('signature_canvas_', '');
             document.getElementById(`field_${fieldId}`).value = canvas.toDataURL();
         }
@@ -1090,13 +1825,9 @@
             const dependsOn = container.dataset.showIfField;
             const showValue = container.dataset.showIfValue;
 
-            // Find the field this depends on
             const sourceField = document.querySelector(`[name="field_${dependsOn}"], [name*="${dependsOn}"]`);
             if (sourceField) {
-                // Check initial state
                 checkConditional(container, sourceField, showValue);
-
-                // Listen for changes
                 sourceField.addEventListener('change', () => {
                     checkConditional(container, sourceField, showValue);
                 });
@@ -1110,16 +1841,12 @@
             fieldValue = sourceField.checked ? 'yes' : 'no';
         }
 
-        if (fieldValue === showValue) {
-            container.style.display = 'block';
-        } else {
-            container.style.display = 'none';
-        }
+        container.style.display = fieldValue === showValue ? 'block' : 'none';
     }
 
     // File drag and drop
     function initFileDragDrop() {
-        document.querySelectorAll('.file-upload-wrapper').forEach(wrapper => {
+        document.querySelectorAll('.file-upload').forEach(wrapper => {
             wrapper.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 wrapper.classList.add('dragover');
@@ -1141,70 +1868,130 @@
         });
     }
 
-    // Field helper functions
-    function selectBoolean(btn, fieldId) {
+    // Yes/No toggle - Kobo style
+    function selectYesNo(btn, fieldId) {
         const group = btn.parentElement;
-        group.querySelectorAll('.boolean-btn').forEach(b => b.classList.remove('selected'));
+        group.querySelectorAll('.yesno-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         document.getElementById(`field_${fieldId}`).value = btn.dataset.value;
+        updateProgress();
     }
 
+    // Rating selection - Kobo style
     function selectRating(btn, fieldId) {
         const group = btn.parentElement;
-        group.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+        group.querySelectorAll('.rating-option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         document.getElementById(`field_${fieldId}`).value = btn.dataset.value;
+        updateProgress();
     }
 
+    // Range slider update
     function updateRangeValue(input) {
         const fieldId = input.id.replace('field_', '');
         document.getElementById(`range_value_${fieldId}`).textContent = input.value;
+        updateProgress();
     }
 
+    // GPS Location - Kobo style
     function getLocation(fieldId) {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    document.getElementById(`field_${fieldId}_lat`).value = position.coords.latitude.toFixed(6);
-                    document.getElementById(`field_${fieldId}_lng`).value = position.coords.longitude.toFixed(6);
-                },
-                (error) => {
-                    alert('Unable to get location: ' + error.message);
-                }
-            );
-        } else {
-            alert('Geolocation is not supported by this browser.');
+        const btn = document.getElementById(`geopoint_btn_${fieldId}`);
+        const coordsEl = document.getElementById(`geopoint_coords_${fieldId}`);
+        const accuracyEl = document.getElementById(`geopoint_accuracy_${fieldId}`);
+
+        if (!navigator.geolocation) {
+            coordsEl.textContent = 'Geolocation not supported';
+            return;
         }
+
+        btn.classList.add('loading');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude.toFixed(6);
+                const lng = position.coords.longitude.toFixed(6);
+                const accuracy = position.coords.accuracy.toFixed(0);
+
+                document.getElementById(`field_${fieldId}_lat`).value = lat;
+                document.getElementById(`field_${fieldId}_lng`).value = lng;
+
+                coordsEl.textContent = `${lat}, ${lng}`;
+                accuracyEl.textContent = `Accuracy: ±${accuracy}m`;
+
+                btn.classList.remove('loading');
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Recapture Location';
+                updateProgress();
+            },
+            (error) => {
+                coordsEl.textContent = 'Error: ' + error.message;
+                btn.classList.remove('loading');
+                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Try Again';
+            },
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+        );
     }
 
-    function showFileName(input) {
-        const fieldId = input.id.replace('field_', '');
-        const fileNameDiv = document.getElementById(`file_name_${fieldId}`);
+    // File preview - Kobo style
+    function showFilePreview(input, fieldId) {
+        const previewDiv = document.getElementById(`file_preview_${fieldId}`);
         if (input.files.length > 0) {
-            fileNameDiv.innerHTML = `<i class="fas fa-check-circle me-1"></i>${input.files[0].name}`;
+            const file = input.files[0];
+            const sizeKB = (file.size / 1024).toFixed(1);
+            previewDiv.innerHTML = `
+                <div class="file-preview">
+                    <i class="fas fa-file fa-2x text-muted"></i>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${sizeKB} KB</div>
+                    </div>
+                    <button type="button" class="remove-btn" onclick="removeFile(${fieldId})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            updateProgress();
         }
     }
 
-    function previewImage(input) {
-        const fieldId = input.id.replace('field_', '');
-        const previewDiv = document.getElementById(`image_preview_${fieldId}`);
+    // Image preview - Kobo style
+    function showImagePreview(input, fieldId) {
+        const previewDiv = document.getElementById(`file_preview_${fieldId}`);
         if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const sizeKB = (file.size / 1024).toFixed(1);
             const reader = new FileReader();
             reader.onload = function(e) {
-                previewDiv.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-height: 150px;">`;
+                previewDiv.innerHTML = `
+                    <div class="file-preview">
+                        <img src="${e.target.result}" alt="Preview">
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${sizeKB} KB</div>
+                        </div>
+                        <button type="button" class="remove-btn" onclick="removeFile(${fieldId})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                updateProgress();
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(file);
         }
+    }
+
+    function removeFile(fieldId) {
+        document.getElementById(`field_${fieldId}`).value = '';
+        document.getElementById(`file_preview_${fieldId}`).innerHTML = '';
+        updateProgress();
     }
 
     function scanBarcode(fieldId) {
-        // This would typically integrate with a barcode scanning library
-        alert('Barcode scanning requires a compatible device camera. Please enter the code manually or use a mobile device with KoboCollect.');
+        alert('Barcode scanning requires a compatible device camera. Please enter the code manually or use KoboCollect app.');
     }
 
     // Navigation functions
     function navigatePage(direction) {
-        // Validate current page before moving forward
         if (direction > 0 && !validateCurrentPage()) {
             return;
         }
@@ -1218,24 +2005,21 @@
     function goToPage(pageIndex) {
         if (pageIndex < 0 || pageIndex >= pages.length) return;
 
-        // Hide current page
         document.querySelectorAll('.form-page').forEach(page => {
             page.classList.remove('active');
         });
 
-        // Show target page
         currentPage = pageIndex;
         const targetPage = document.getElementById(`page-${currentPage}`);
         if (targetPage) {
             targetPage.classList.add('active');
         }
 
-        renderProgressSteps();
+        renderPageTabs();
         updateNavigation();
-        updatePageCounter();
+        updateProgress();
 
-        // Scroll to top of form
-        document.querySelector('.form-wizard').scrollIntoView({ behavior: 'smooth' });
+        document.querySelector('.enketo-form').scrollIntoView({ behavior: 'smooth' });
     }
 
     function updateNavigation() {
@@ -1243,63 +2027,79 @@
         const nextBtn = document.getElementById('nextBtn');
         const submitBtn = document.getElementById('submitBtn');
 
-        // Show/hide prev button
-        prevBtn.style.display = currentPage > 0 ? 'inline-block' : 'none';
+        prevBtn.style.display = currentPage > 0 ? 'inline-flex' : 'none';
 
-        // Show next or submit button
         if (currentPage === pages.length - 1) {
             nextBtn.style.display = 'none';
-            submitBtn.style.display = 'inline-block';
+            submitBtn.style.display = 'inline-flex';
         } else {
-            nextBtn.style.display = 'inline-block';
+            nextBtn.style.display = 'inline-flex';
             submitBtn.style.display = 'none';
         }
     }
 
-    function updatePageCounter() {
-        const counter = document.getElementById('pageCounter');
-        if (pages.length > 1) {
-            counter.textContent = `Page ${currentPage + 1} of ${pages.length}`;
-            counter.style.display = 'block';
-        } else {
-            counter.style.display = 'none';
-        }
+    // Progress update - Kobo style
+    function updateProgress() {
+        const totalFields = formFields.filter(f => !['section', 'group', 'note'].includes(f.type)).length;
+        let filledCount = 0;
+
+        document.querySelectorAll('.enketo-input, .enketo-select, input[type="hidden"]').forEach(field => {
+            if (field.value && field.value.trim() !== '' &&
+                !field.id.includes('_lat') && !field.id.includes('_lng') &&
+                !field.id.includes('csrf')) {
+                filledCount++;
+            }
+        });
+
+        // Count selected radio/checkbox options
+        document.querySelectorAll('.option-item.selected').forEach(() => {
+            filledCount++;
+        });
+
+        // Count yes/no selections
+        document.querySelectorAll('.yesno-btn.selected, .rating-option.selected').forEach(() => {
+            filledCount++;
+        });
+
+        const percentage = totalFields > 0 ? Math.min(100, Math.round((filledCount / totalFields) * 100)) : 0;
+
+        document.getElementById('progressFill').style.width = `${percentage}%`;
+        document.getElementById('progressText').textContent = `${percentage}%`;
     }
 
-    // Validation
+    // Validation - Kobo style
     function validateCurrentPage() {
         const currentPageEl = document.getElementById(`page-${currentPage}`);
-        const requiredFields = currentPageEl.querySelectorAll('[required]');
+        const questions = currentPageEl.querySelectorAll('.question');
         let isValid = true;
 
-        requiredFields.forEach(field => {
-            // Skip hidden conditional fields
-            const container = field.closest('.form-field-container');
-            if (container && container.style.display === 'none') {
-                return;
-            }
+        questions.forEach(question => {
+            if (question.style.display === 'none') return;
 
-            if (!field.value || field.value.trim() === '') {
-                isValid = false;
-                field.classList.add('is-invalid');
-
-                // Add validation message if not present
-                if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
-                    const feedback = document.createElement('div');
-                    feedback.className = 'invalid-feedback';
-                    feedback.textContent = 'This field is required';
-                    field.parentNode.insertBefore(feedback, field.nextSibling);
+            const requiredFields = question.querySelectorAll('[required]');
+            requiredFields.forEach(field => {
+                if (!field.value || field.value.trim() === '') {
+                    isValid = false;
+                    question.classList.add('invalid');
+                    field.classList.add('invalid');
+                } else {
+                    question.classList.remove('invalid');
+                    field.classList.remove('invalid');
                 }
-            } else {
-                field.classList.remove('is-invalid');
+            });
+
+            // Check hidden fields for yes/no and rating
+            const hiddenRequired = question.querySelector('input[type="hidden"][required]');
+            if (hiddenRequired && (!hiddenRequired.value || hiddenRequired.value.trim() === '')) {
+                isValid = false;
+                question.classList.add('invalid');
             }
         });
 
         if (!isValid) {
-            // Focus first invalid field
-            const firstInvalid = currentPageEl.querySelector('.is-invalid');
+            const firstInvalid = currentPageEl.querySelector('.question.invalid');
             if (firstInvalid) {
-                firstInvalid.focus();
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
@@ -1308,46 +2108,270 @@
 
     function setupFormValidation() {
         // Clear validation styling on input
-        document.querySelectorAll('input, select, textarea').forEach(field => {
-            field.addEventListener('input', () => {
-                field.classList.remove('is-invalid');
-            });
+        document.addEventListener('input', (e) => {
+            const question = e.target.closest('.question');
+            if (question) {
+                question.classList.remove('invalid');
+                e.target.classList.remove('invalid');
+            }
+            updateProgress();
+        });
+
+        document.addEventListener('change', (e) => {
+            const question = e.target.closest('.question');
+            if (question) {
+                question.classList.remove('invalid');
+            }
+            updateProgress();
         });
 
         // Form submission
-        document.getElementById('wizardForm').addEventListener('submit', function(e) {
+        document.getElementById('enketoForm').addEventListener('submit', function(e) {
             if (!validateCurrentPage()) {
                 e.preventDefault();
                 return false;
             }
 
-            // Show loading state
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
             submitBtn.disabled = true;
         });
     }
 
-    // Update overall progress
-    function updateOverallProgress() {
-        const totalFields = formFields.filter(f => !['section', 'group', 'note'].includes(f.type)).length;
-        document.getElementById('totalFields').textContent = totalFields;
+    // === New Field Type Functions ===
 
-        // Count filled fields
-        let filledCount = 0;
-        document.querySelectorAll('input, select, textarea').forEach(field => {
-            if (field.value && field.value.trim() !== '' && !field.id.includes('_lat') && !field.id.includes('_lng')) {
-                filledCount++;
-            }
+    // Ranking field - drag and drop
+    function initRankingFields() {
+        document.querySelectorAll('.rank-list').forEach(list => {
+            let draggedItem = null;
+
+            list.querySelectorAll('.rank-item').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    this.classList.add('dragging');
+                });
+
+                item.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    updateRankOrder(list);
+                });
+
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(list, e.clientY);
+                    if (afterElement == null) {
+                        list.appendChild(draggedItem);
+                    } else {
+                        list.insertBefore(draggedItem, afterElement);
+                    }
+                });
+            });
         });
-
-        document.getElementById('completedFields').textContent = filledCount;
-        const percentage = totalFields > 0 ? (filledCount / totalFields) * 100 : 0;
-        document.getElementById('overallProgress').style.width = `${percentage}%`;
-
-        // Update on input
-        document.addEventListener('input', updateOverallProgress);
-        document.addEventListener('change', updateOverallProgress);
     }
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.rank-item:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function updateRankOrder(list) {
+        const items = list.querySelectorAll('.rank-item');
+        const order = [];
+        items.forEach((item, index) => {
+            item.querySelector('.rank-position').textContent = index + 1;
+            order.push(item.dataset.value);
+        });
+        const fieldId = list.id.replace('rank_list_', '');
+        document.getElementById(`field_${fieldId}`).value = JSON.stringify(order);
+        updateProgress();
+    }
+
+    // Geotrace - record path
+    let geotraceWatchId = null;
+    let geotracePoints = [];
+
+    function startGeotrace(fieldId) {
+        const btn = document.getElementById(`geotrace_btn_${fieldId}`);
+        const display = document.getElementById(`geotrace_display_${fieldId}`);
+        const pointsEl = document.getElementById(`geotrace_points_${fieldId}`);
+
+        if (geotraceWatchId) {
+            // Stop recording
+            navigator.geolocation.clearWatch(geotraceWatchId);
+            geotraceWatchId = null;
+            btn.innerHTML = '<i class="fas fa-play"></i> Start Recording Path';
+            document.getElementById(`field_${fieldId}`).value = JSON.stringify(geotracePoints);
+            updateProgress();
+        } else {
+            // Start recording
+            geotracePoints = [];
+            btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+            display.querySelector('.coords').innerHTML = '<i class="fas fa-route me-2"></i>Recording path...';
+
+            geotraceWatchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    geotracePoints.push({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                    pointsEl.textContent = `${geotracePoints.length} points recorded`;
+                },
+                (error) => {
+                    display.querySelector('.coords').textContent = 'Error: ' + error.message;
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+    }
+
+    // Geoshape - record area
+    let geoshapeWatchId = null;
+    let geoshapePoints = [];
+
+    function startGeoshape(fieldId) {
+        const btn = document.getElementById(`geoshape_btn_${fieldId}`);
+        const display = document.getElementById(`geoshape_display_${fieldId}`);
+        const pointsEl = document.getElementById(`geoshape_points_${fieldId}`);
+
+        if (geoshapeWatchId) {
+            // Stop recording
+            navigator.geolocation.clearWatch(geoshapeWatchId);
+            geoshapeWatchId = null;
+            btn.innerHTML = '<i class="fas fa-play"></i> Start Recording Area';
+            // Close the polygon
+            if (geoshapePoints.length > 2) {
+                geoshapePoints.push(geoshapePoints[0]);
+            }
+            document.getElementById(`field_${fieldId}`).value = JSON.stringify(geoshapePoints);
+            updateProgress();
+        } else {
+            // Start recording
+            geoshapePoints = [];
+            btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+            display.querySelector('.coords').innerHTML = '<i class="fas fa-draw-polygon me-2"></i>Recording area...';
+
+            geoshapeWatchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    geoshapePoints.push({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                    pointsEl.textContent = `${geoshapePoints.length} points recorded`;
+                },
+                (error) => {
+                    display.querySelector('.coords').textContent = 'Error: ' + error.message;
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+    }
+
+    // Background audio recording
+    let bgAudioRecorder = null;
+    let bgAudioChunks = [];
+
+    function toggleBackgroundAudio(fieldId) {
+        const btn = document.getElementById(`bg_audio_btn_${fieldId}`);
+        const status = document.getElementById(`bg_audio_status_${fieldId}`);
+
+        if (bgAudioRecorder && bgAudioRecorder.state === 'recording') {
+            // Stop recording
+            bgAudioRecorder.stop();
+            btn.innerHTML = '<i class="fas fa-microphone-alt"></i> Enable Background Recording';
+            status.classList.remove('recording');
+            status.innerHTML = '<i class="fas fa-check"></i><span>Recording saved</span>';
+        } else {
+            // Start recording
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    bgAudioRecorder = new MediaRecorder(stream);
+                    bgAudioChunks = [];
+
+                    bgAudioRecorder.ondataavailable = (e) => {
+                        bgAudioChunks.push(e.data);
+                    };
+
+                    bgAudioRecorder.onstop = () => {
+                        const blob = new Blob(bgAudioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            document.getElementById(`field_${fieldId}`).value = reader.result;
+                            updateProgress();
+                        };
+                        reader.readAsDataURL(blob);
+                    };
+
+                    bgAudioRecorder.start();
+                    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+                    status.classList.add('recording');
+                    status.innerHTML = '<i class="fas fa-microphone-alt"></i><span>Recording in progress...</span>';
+                })
+                .catch(err => {
+                    status.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Microphone access denied</span>';
+                });
+        }
+    }
+
+    // Repeat group - add/remove items
+    let repeatCounters = {};
+
+    function addRepeatItem(fieldId) {
+        if (!repeatCounters[fieldId]) {
+            repeatCounters[fieldId] = 0;
+        }
+        repeatCounters[fieldId]++;
+
+        const container = document.getElementById(`repeat_items_${fieldId}`);
+        const itemIndex = repeatCounters[fieldId];
+
+        const itemHtml = `
+            <div class="repeat-item" id="repeat_item_${fieldId}_${itemIndex}">
+                <div class="repeat-item-header">
+                    <span class="repeat-item-title">Entry #${itemIndex}</span>
+                    <button type="button" class="repeat-item-remove" onclick="removeRepeatItem(${fieldId}, ${itemIndex})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="repeat-item-fields">
+                    <input type="text" class="enketo-input mb-2" name="field_${fieldId}_${itemIndex}_text"
+                        placeholder="Enter value">
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', itemHtml);
+        updateProgress();
+    }
+
+    function removeRepeatItem(fieldId, itemIndex) {
+        const item = document.getElementById(`repeat_item_${fieldId}_${itemIndex}`);
+        if (item) {
+            item.remove();
+        }
+        updateProgress();
+    }
+
+    // Cascade select - load levels
+    function loadCascadeLevel(fieldId, level, parentValue) {
+        // This is a placeholder - in production, this would fetch data from server
+        const levelSelect = document.getElementById(`field_${fieldId}_level${level}`) ||
+                           document.getElementById(`field_${fieldId}`);
+        if (levelSelect && parentValue) {
+            levelSelect.style.display = 'block';
+        }
+    }
+
+    // Initialize new field types on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initRankingFields();
+    });
 </script>
 {% endblock %}

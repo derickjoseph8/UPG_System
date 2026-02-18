@@ -371,23 +371,32 @@ class FormField(models.Model):
         ('radio', 'Radio Buttons'),
         ('checkbox', 'Checkboxes (Multiple)'),
         ('boolean', 'Yes/No'),
+        ('rank', 'Ranking (Order Items)'),
+        ('matrix', 'Question Matrix/Grid'),
+        ('cascade', 'Cascading Select'),
 
         # Media Fields
         ('file', 'File Upload'),
         ('image', 'Image/Photo Upload'),
         ('audio', 'Audio Recording'),
         ('video', 'Video Recording'),
+        ('background_audio', 'Background Audio'),
 
         # Special Fields
         ('rating', 'Rating Scale (1-5)'),
         ('location', 'GPS Location (Lat/Long)'),
+        ('geotrace', 'GPS Line/Path'),
+        ('geoshape', 'GPS Area/Polygon'),
         ('signature', 'Digital Signature'),
         ('barcode', 'Barcode/QR Scanner'),
         ('range', 'Range Slider'),
+        ('acknowledge', 'Acknowledgment'),
+        ('hidden', 'Hidden Field'),
 
         # Organizational
         ('section', 'Section Header'),
         ('group', 'Field Group'),
+        ('repeat', 'Repeat Group'),
     ]
 
     form_template = models.ForeignKey(FormTemplate, on_delete=models.CASCADE, related_name='fields')
