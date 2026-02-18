@@ -28,7 +28,8 @@ class Mentor(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     country = models.CharField(max_length=50, default='Kenya')
-    office = models.CharField(max_length=100)
+    office = models.CharField(max_length=100, blank=True, default='')
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -43,11 +44,11 @@ class BusinessMentorCycle(models.Model):
     Business Mentor Cycle - logs cycle details and activities
     """
     bm_cycle_name = models.CharField(max_length=100, unique=True)
-    business_mentor = models.ForeignKey(Mentor, on_delete=models.CASCADE)
-    field_associate = models.CharField(max_length=100)
-    cycle = models.CharField(max_length=20)  # e.g., FY25C1
-    project = models.CharField(max_length=100)
-    office = models.CharField(max_length=100)
+    business_mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, null=True, blank=True)
+    field_associate = models.CharField(max_length=100, blank=True, default='')
+    cycle = models.CharField(max_length=20, blank=True, default='')  # e.g., FY25C1
+    project = models.CharField(max_length=100, blank=True, default='')
+    office = models.CharField(max_length=100, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
