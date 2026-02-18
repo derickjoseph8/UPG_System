@@ -336,9 +336,11 @@ class CustomRole(models.Model):
         if self.geographic_scope == 'all':
             return Village.objects.all()
         elif self.geographic_scope == 'county' and self.allowed_county:
-            return Village.objects.filter(county=self.allowed_county)
+            # Filter through subcounty_obj -> county relationship
+            return Village.objects.filter(subcounty_obj__county__name=self.allowed_county)
         elif self.geographic_scope == 'subcounty' and self.allowed_subcounties:
-            return Village.objects.filter(subcounty__in=self.allowed_subcounties)
+            # Filter through subcounty_obj relationship
+            return Village.objects.filter(subcounty_obj__name__in=self.allowed_subcounties)
         elif self.geographic_scope == 'villages':
             return self.allowed_villages.all()
         return Village.objects.none()
@@ -348,9 +350,15 @@ class CustomRole(models.Model):
         if self.geographic_scope == 'all':
             return True
         elif self.geographic_scope == 'county':
-            return village.county == self.allowed_county
+            # Check county through subcounty_obj relationship
+            if village.subcounty_obj and village.subcounty_obj.county:
+                return village.subcounty_obj.county.name == self.allowed_county
+            return False
         elif self.geographic_scope == 'subcounty':
-            return village.subcounty in self.allowed_subcounties
+            # Check subcounty name through subcounty_obj
+            if village.subcounty_obj:
+                return village.subcounty_obj.name in self.allowed_subcounties
+            return False
         elif self.geographic_scope == 'villages':
             return village in self.allowed_villages.all()
         return False

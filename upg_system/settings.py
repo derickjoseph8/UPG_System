@@ -14,17 +14,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Security settings - Use environment variables in production
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-upg-system-dev-key-change-in-production-123456789')
+# SECRET_KEY is REQUIRED - no default value for security
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# Defaults to False for security - set DEBUG=True in .env for development
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 # CSRF Trusted Origins - Required for Django 4+ for cross-origin requests
+# Configure in .env file - no hardcoded production URLs
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='http://localhost,http://127.0.0.1,http://54.87.33.103,https://54.87.33.103',
+    default='http://localhost,http://127.0.0.1',
     cast=Csv()
 )
 
@@ -205,12 +208,12 @@ ENABLE_SSL = config('ENABLE_SSL', default=False, cast=bool)
 # Session Configuration
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SECURE = ENABLE_SSL  # Only True when SSL is configured
+SESSION_COOKIE_SECURE = not DEBUG  # Secure cookies in production (when DEBUG=False)
 SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
 SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
 # CSRF Configuration
-CSRF_COOKIE_SECURE = ENABLE_SSL  # Only True when SSL is configured
+CSRF_COOKIE_SECURE = not DEBUG  # Secure cookies in production (when DEBUG=False)
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token for AJAX requests
 CSRF_COOKIE_SAMESITE = 'Lax'
 
@@ -219,9 +222,10 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking
 
-# Production security settings (enabled when DEBUG=False and ENABLE_SSL=True)
-if not DEBUG and ENABLE_SSL:
-    SECURE_SSL_REDIRECT = True
+# Production security settings (enabled when DEBUG=False)
+if not DEBUG:
+    # SSL redirect can be disabled if behind a proxy that handles SSL
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
