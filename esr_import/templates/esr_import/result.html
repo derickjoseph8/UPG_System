@@ -8,7 +8,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'esr_import:import_page' %}">ESR Import</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:esr_import_list' %}">ESR Import</a></li>
                     <li class="breadcrumb-item active">Import Result</li>
                 </ol>
             </nav>
@@ -230,10 +230,10 @@
 
     <div class="row mt-4">
         <div class="col-12">
-            <a href="{% url 'esr_import:import_page' %}" class="btn btn-primary">
+            <a href="{% url 'core:esr_import_list' %}" class="btn btn-primary">
                 <i class="fas fa-upload me-2"></i>Import More Data
             </a>
-            <a href="{% url 'esr_import:household_list' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'core:esr_household_list' %}" class="btn btn-outline-secondary">
                 <i class="fas fa-home me-2"></i>View Households
             </a>
         </div>

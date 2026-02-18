@@ -1,12 +1,21 @@
 from django.urls import path
 from . import views
 from . import kobo_views
+from esr_import import views as esr_views
 
 app_name = 'core'
 
 urlpatterns = [
-    path('esr-imports/', views.esr_import_list, name='esr_import_list'),
-    path('esr-imports/create/', views.esr_import_create, name='esr_import_create'),
+    # ESR Import - Comprehensive import functionality
+    path('esr-imports/', esr_views.esr_import_page, name='esr_import_list'),
+    path('esr-imports/create/', esr_views.esr_import_page, name='esr_import_create'),
+    path('esr-imports/template/', esr_views.download_template, name='esr_import_template'),
+    path('esr-imports/process/', esr_views.process_import, name='esr_import_process'),
+    path('esr-imports/result/<str:batch_id>/', esr_views.import_result, name='esr_import_result'),
+    path('esr-imports/history/', esr_views.import_history, name='esr_import_history'),
+    path('esr-imports/households/', esr_views.household_list, name='esr_household_list'),
+    path('esr-imports/households/<int:household_id>/', esr_views.household_detail, name='esr_household_detail'),
+    # Keep old detail route for backwards compatibility
     path('esr-imports/<int:pk>/', views.esr_import_detail, name='esr_import_detail'),
 
     # Mentor-Village Assignment

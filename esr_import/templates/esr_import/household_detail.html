@@ -8,8 +8,8 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'esr_import:import_page' %}">ESR Import</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'esr_import:household_list' %}">Households</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:esr_import_list' %}">ESR Import</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:esr_household_list' %}">Households</a></li>
                     <li class="breadcrumb-item active">{{ household.household_code }}</li>
                 </ol>
             </nav>
@@ -173,7 +173,7 @@
                     <button type="submit" class="btn btn-primary btn-lg">
                         <i class="fas fa-save me-2"></i>Save Changes
                     </button>
-                    <a href="{% url 'esr_import:household_list' %}" class="btn btn-outline-secondary btn-lg">
+                    <a href="{% url 'core:esr_household_list' %}" class="btn btn-outline-secondary btn-lg">
                         <i class="fas fa-arrow-left me-2"></i>Back to List
                     </a>
                 </div>

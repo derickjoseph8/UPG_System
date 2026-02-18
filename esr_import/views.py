@@ -135,7 +135,7 @@ def download_template(request):
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     except ImportError:
         messages.error(request, "openpyxl is required for Excel operations")
-        return redirect('esr_import:import_page')
+        return redirect('core:esr_import_list')
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -250,11 +250,11 @@ def download_template(request):
 def process_import(request):
     """Process ESR import from Excel file"""
     if request.method != 'POST':
-        return redirect('esr_import:import_page')
+        return redirect('core:esr_import_list')
 
     if 'file' not in request.FILES:
         messages.error(request, "Please select a file to import")
-        return redirect('esr_import:import_page')
+        return redirect('core:esr_import_list')
 
     uploaded_file = request.FILES['file']
     skip_duplicates = request.POST.get('skip_duplicates', 'true') == 'true'
@@ -262,7 +262,7 @@ def process_import(request):
     # Validate file type
     if not uploaded_file.name.lower().endswith(('.xlsx', '.xls')):
         messages.error(request, "File must be Excel format (.xlsx or .xls)")
-        return redirect('esr_import:import_page')
+        return redirect('core:esr_import_list')
 
     try:
         import openpyxl
@@ -270,10 +270,10 @@ def process_import(request):
         sheet = workbook.active
     except ImportError:
         messages.error(request, "openpyxl library is required for Excel import")
-        return redirect('esr_import:import_page')
+        return redirect('core:esr_import_list')
     except Exception as e:
         messages.error(request, f"Failed to parse Excel file: {str(e)}")
-        return redirect('esr_import:import_page')
+        return redirect('core:esr_import_list')
 
     # Get headers from first row
     headers = []
@@ -747,7 +747,7 @@ def process_import(request):
         f"Duplicates skipped: {stats['duplicates']}. Errors: {stats['failed']}"
     )
 
-    return redirect('esr_import:import_result', batch_id=batch_id)
+    return redirect('core:esr_import_result', batch_id=batch_id)
 
 
 @login_required
@@ -845,7 +845,7 @@ def household_detail(request, household_id):
         household.save()
 
         messages.success(request, "Household updated successfully")
-        return redirect('esr_import:household_detail', household_id=household_id)
+        return redirect('core:esr_household_detail', household_id=household_id)
 
     members = household.members.all()
 

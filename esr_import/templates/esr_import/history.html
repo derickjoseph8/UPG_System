@@ -8,7 +8,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'esr_import:import_page' %}">ESR Import</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:esr_import_list' %}">ESR Import</a></li>
                     <li class="breadcrumb-item active">Import History</li>
                 </ol>
             </nav>
@@ -53,7 +53,7 @@
                             <td>{{ log.imported_by.get_full_name|default:log.imported_by.username }}</td>
                             <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
                             <td>
-                                <a href="{% url 'esr_import:import_result' batch_id=log.batch_id %}"
+                                <a href="{% url 'core:esr_import_result' batch_id=log.batch_id %}"
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-eye"></i>
                                 </a>
