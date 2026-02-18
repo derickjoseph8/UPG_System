@@ -27,6 +27,9 @@ def login_view(request):
                 login(request, user)
                 # Security fix: Validate next URL to prevent open redirect attacks
                 next_url = request.GET.get('next', '/')
+                # Prevent redirect loop to logout page
+                if 'logout' in next_url.lower():
+                    next_url = '/'
                 if not url_has_allowed_host_and_scheme(
                     url=next_url,
                     allowed_hosts={request.get_host()},
