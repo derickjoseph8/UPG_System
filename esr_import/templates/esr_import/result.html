@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Result - {{ import_log.batch_id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'esr_import:import_page' %}">ESR Import</a></li>
+                    <li class="breadcrumb-item active">Import Result</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-check-circle me-2 text-success"></i>Import Result</h2>
+            <p class="text-muted">Batch ID: {{ import_log.batch_id }}</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <h3>{{ import_log.total_records }}</h3>
+                    <p class="mb-0">Total Records</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card-green">
+                <div class="card-body text-center text-white">
+                    <h3>{{ import_log.successful }}</h3>
+                    <p class="mb-0">Successful</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card-orange">
+                <div class="card-body text-center text-white">
+                    <h3>{{ import_log.failed }}</h3>
+                    <p class="mb-0">Failed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning">
+                <div class="card-body text-center">
+                    <h3>{{ import_log.duplicates }}</h3>
+                    <p class="mb-0">Duplicates Skipped</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <!-- Created Entities -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Created Entities</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><i class="fas fa-home me-2 text-primary"></i>Households</td>
+                                <td class="text-end"><strong>{{ import_log.households_created }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-map-marker-alt me-2 text-success"></i>Villages</td>
+                                <td class="text-end"><strong>{{ import_log.villages_created }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-user me-2 text-info"></i>Mentors</td>
+                                <td class="text-end"><strong>{{ import_log.mentors_created }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-user-tie me-2 text-warning"></i>Supervisors</td>
+                                <td class="text-end"><strong>{{ import_log.supervisors_created }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="fas fa-sync-alt me-2 text-secondary"></i>BM Cycles</td>
+                                <td class="text-end"><strong>{{ import_log.bm_cycles_created }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Import Details -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Import Details</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>File Name</td>
+                                <td><strong>{{ import_log.file_name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Status</td>
+                                <td>
+                                    {% if import_log.status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                    {% elif import_log.status == 'completed_with_errors' %}
+                                    <span class="badge bg-warning">Completed with Errors</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ import_log.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Imported By</td>
+                                <td>{{ import_log.imported_by.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td>Import Date</td>
+                                <td>{{ import_log.created_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <!-- Mentor Credentials -->
+            {% if import_log.mentor_credentials %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>New Mentor Credentials</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> Save these credentials! Users must change password on first login.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Username</th>
+                                    <th>Temp Password</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cred in import_log.mentor_credentials %}
+                                <tr>
+                                    <td>{{ cred.name }}</td>
+                                    <td><code>{{ cred.username }}</code></td>
+                                    <td><code>{{ cred.temp_password }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Supervisor Credentials -->
+            {% if import_log.supervisor_credentials %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>New Supervisor Credentials</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> Save these credentials! Users must change password on first login.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Username</th>
+                                    <th>Temp Password</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cred in import_log.supervisor_credentials %}
+                                <tr>
+                                    <td>{{ cred.name }}</td>
+                                    <td><code>{{ cred.username }}</code></td>
+                                    <td><code>{{ cred.temp_password }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Errors -->
+            {% if import_log.error_summary.errors %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Errors</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Row</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for error in import_log.error_summary.errors %}
+                                <tr>
+                                    <td>{{ error.row }}</td>
+                                    <td>{{ error.error }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{% url 'esr_import:import_page' %}" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Import More Data
+            </a>
+            <a href="{% url 'esr_import:household_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-home me-2"></i>View Households
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

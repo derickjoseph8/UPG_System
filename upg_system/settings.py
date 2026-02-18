@@ -61,6 +61,7 @@ LOCAL_APPS = [
     'enrollment',  # Enrollment and targeting system
     'settings_module',
     've_reporting',  # Silent VE Data Hub API (no UI)
+    'esr_import',  # ESR Data Import
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

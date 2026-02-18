@@ -38,6 +38,9 @@ urlpatterns = [
     path('forms/', include('forms.urls')),
     path('enrollment/', include('enrollment.urls')),  # Enrollment and targeting
 
+    # ESR Data Import
+    path('esr-import/', include('esr_import.urls')),
+
     # VE Reporting API (Silent - no UI, external API for VE Data Hub)
     path('api/v1/ve-reporting/', include('ve_reporting.urls')),
 ]
