@@ -86,8 +86,30 @@ class BusinessGroupMember(models.Model):
         unique_together = ['business_group', 'household']
 
 
-# NOTE: SBGrant, PRGrant, and BusinessProgressSurvey models have been consolidated
-# into the upg_grants app. Use upg_grants.models.SBGrant and upg_grants.models.PRGrant
-# for all grant management functionality. The upg_grants versions provide enhanced
-# features including multi-applicant support, approval workflows, and automatic
-# grant calculations.
+# NOTE: SBGrant and PRGrant models have been consolidated into the upg_grants app.
+# Use upg_grants.models.SBGrant and upg_grants.models.PRGrant for grant management.
+
+
+class BusinessProgressSurvey(models.Model):
+    """
+    Business group progress and performance tracking
+    """
+    business_group = models.ForeignKey(BusinessGroup, on_delete=models.CASCADE, related_name='progress_surveys')
+    survey_date = models.DateField()
+    surveyor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Financial metrics
+    grant_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    grant_used = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    profit = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    business_inputs = models.TextField(blank=True)
+    business_inventory = models.TextField(blank=True)
+    business_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.business_group.name} - Progress Survey - {self.survey_date}"
+
+    class Meta:
+        db_table = 'upg_business_progress_surveys'
