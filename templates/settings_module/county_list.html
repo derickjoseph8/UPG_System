@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-globe-africa"></i> {{ page_title }}</h1>
+        <p class="text-muted">Manage county data</p>
+    </div>
+    <div>
+        <a href="{% url 'settings:location_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left"></i> Back to Locations
+        </a>
+        <a href="{% url 'settings:county_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add County
+        </a>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Search counties..." value="{{ search_query|default:'' }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">Search</button>
+                {% if search_query %}
+                <a href="{% url 'settings:county_list' %}" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Counties Table -->
+<div class="card">
+    <div class="card-body">
+        {% if counties %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>County Name</th>
+                        <th>Country</th>
+                        <th class="text-center">Sub-Counties</th>
+                        <th class="text-center">Wards</th>
+                        <th class="text-center">Villages</th>
+                        <th>Created</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for county in counties %}
+                    <tr>
+                        <td><strong>{{ county.name }}</strong></td>
+                        <td>{{ county.country }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'settings:subcounty_list' %}?county={{ county.id }}" class="badge bg-success text-decoration-none">
+                                {{ county.subcounty_count }}
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'settings:ward_list' %}?county={{ county.id }}" class="badge bg-warning text-decoration-none">
+                                {{ county.ward_count }}
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'settings:village_list' %}?county={{ county.id }}" class="badge bg-info text-decoration-none">
+                                {{ county.village_count }}
+                            </a>
+                        </td>
+                        <td>{{ county.created_at|date:"M d, Y" }}</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'settings:subcounty_create' %}?county={{ county.id }}"
+                                   class="btn btn-outline-success" title="Add Sub-County">
+                                    <i class="fas fa-plus"></i>
+                                </a>
+                                <a href="{% url 'settings:county_edit' county.id %}"
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger"
+                                        onclick="confirmDelete({{ county.id }}, '{{ county.name|escapejs }}', {{ county.subcounty_count }})"
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if counties.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if counties.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ counties.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in counties.paginator.page_range %}
+                    {% if counties.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > counties.number|add:'-3' and num < counties.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if counties.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ counties.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-globe-africa fa-4x text-muted mb-3"></i>
+            <h4>No Counties Found</h4>
+            {% if search_query %}
+            <p class="text-muted">No counties match your search criteria.</p>
+            <a href="{% url 'settings:county_list' %}" class="btn btn-outline-secondary">Clear Search</a>
+            {% else %}
+            <p class="text-muted">Start by adding your first county.</p>
+            {% endif %}
+            <a href="{% url 'settings:county_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add County
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the county "<strong id="deleteItemName"></strong>"?</p>
+                <p class="text-danger mb-0" id="deleteWarning"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteItem()">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let deleteItemId = null;
+
+function confirmDelete(id, name, subcountyCount) {
+    deleteItemId = id;
+    document.getElementById('deleteItemName').textContent = name;
+
+    if (subcountyCount > 0) {
+        document.getElementById('deleteWarning').textContent =
+            `This county has ${subcountyCount} sub-county(ies). You must delete them first.`;
+        document.getElementById('confirmDeleteBtn').disabled = true;
+    } else {
+        document.getElementById('deleteWarning').textContent = 'This action cannot be undone.';
+        document.getElementById('confirmDeleteBtn').disabled = false;
+    }
+
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function deleteItem() {
+    if (!deleteItemId) return;
+
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
+    fetch(`/settings/locations/counties/${deleteItemId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+    });
+}
+</script>
+{% endblock %}

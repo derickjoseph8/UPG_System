@@ -111,6 +111,33 @@
 </div>
 
 <div class="row mb-4">
+    <!-- Location Management -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Location Management</h5>
+                <span class="badge bg-light text-success">Geographic Data</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Manage counties, sub-counties, wards, and villages</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-globe-africa text-primary me-2"></i>Counties</li>
+                    <li><i class="fas fa-map-signs text-success me-2"></i>Sub-Counties</li>
+                    <li><i class="fas fa-map-pin text-warning me-2"></i>Wards</li>
+                    <li><i class="fas fa-home text-info me-2"></i>Villages</li>
+                </ul>
+                <div class="d-flex gap-2 mt-3">
+                    <a href="{% url 'settings:location_management' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-map-marker-alt"></i> Manage Locations
+                    </a>
+                    <a href="{% url 'settings:village_create' %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-plus"></i> Add Village
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Audit & Logging -->
     <div class="col-md-6 mb-4">
         <div class="card">
@@ -133,7 +160,9 @@
             </div>
         </div>
     </div>
+</div>
 
+<div class="row mb-4">
     <!-- System Alerts -->
     <div class="col-md-6 mb-4">
         <div class="card">
@@ -160,9 +189,7 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mb-4">
     <!-- Backup & Restore -->
     <div class="col-md-6 mb-4">
         <div class="card border-primary">
@@ -171,23 +198,14 @@
                 <span class="badge bg-light text-primary">{{ backup_count|default:0 }} backups</span>
             </div>
             <div class="card-body">
-                <p class="text-muted">Manage system backups, restore points, and automated backup schedules</p>
+                <p class="text-muted">Manage system backups and restore points</p>
                 <ul class="list-unstyled">
                     <li><i class="fas fa-save text-primary me-2"></i>Database Backups</li>
                     <li><i class="fas fa-archive text-success me-2"></i>Full System Backups</li>
                     <li><i class="fas fa-clock text-info me-2"></i>Automated Scheduling</li>
                     <li><i class="fas fa-undo text-warning me-2"></i>Restore Points</li>
                 </ul>
-                {% if last_backup %}
-                <div class="alert alert-success py-2 mb-3">
-                    <small><i class="fas fa-check-circle me-1"></i>Last backup: {{ last_backup.completed_at|date:"M d, Y H:i" }} ({{ last_backup.backup_type }})</small>
-                </div>
-                {% else %}
-                <div class="alert alert-warning py-2 mb-3">
-                    <small><i class="fas fa-exclamation-triangle me-1"></i>No backups found. Create your first backup now.</small>
-                </div>
-                {% endif %}
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 mt-3">
                     <a href="{% url 'settings:backup_dashboard' %}" class="btn btn-primary btn-sm">
                         <i class="fas fa-database"></i> Backup Dashboard
                     </a>
@@ -198,7 +216,9 @@
             </div>
         </div>
     </div>
+</div>
 
+<div class="row mb-4">
     <!-- KoboToolbox Integration -->
     <div class="col-md-6 mb-4">
         <div class="card">
@@ -207,7 +227,7 @@
                 <span class="badge bg-info">Data Collection</span>
             </div>
             <div class="card-body">
-                <p class="text-muted">Configure KoboToolbox API settings for data collection and synchronization</p>
+                <p class="text-muted">Configure KoboToolbox API settings for data collection</p>
                 <ul class="list-unstyled">
                     <li><i class="fas fa-link text-primary me-2"></i>API Connection</li>
                     <li><i class="fas fa-sync text-success me-2"></i>Data Synchronization</li>
@@ -222,9 +242,7 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="row mb-4">
     <!-- VE Data Hub API Keys -->
     <div class="col-md-6 mb-4">
         <div class="card border-info">
@@ -233,7 +251,7 @@
                 <span class="badge bg-light text-info">{{ ve_api_key_count|default:0 }} keys</span>
             </div>
             <div class="card-body">
-                <p class="text-muted">Manage API keys for Village Enterprise Data Hub integration</p>
+                <p class="text-muted">Manage API keys for Village Enterprise Data Hub</p>
                 <ul class="list-unstyled">
                     <li><i class="fas fa-shield-alt text-success me-2"></i>Secure API Access</li>
                     <li><i class="fas fa-chart-line text-primary me-2"></i>Aggregated Reporting</li>

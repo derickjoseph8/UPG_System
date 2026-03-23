@@ -1,6 +1,11 @@
 """
 Core models for UPG System
 Based on Graduation Model Tracking System data dictionary
+
+IMPORTANT: This file contains the updated Ward model.
+After copying, you MUST run migrations:
+  python manage.py makemigrations core
+  python manage.py migrate
 """
 
 from django.db import models
@@ -91,12 +96,31 @@ class SubCounty(models.Model):
         unique_together = ['name', 'county']
 
 
-class Village(models.Model):
+class Ward(models.Model):
     """
-    Village information including subcounty and coverage
+    Ward information - administrative unit between SubCounty and Village
     """
     name = models.CharField(max_length=100)
-    subcounty_obj = models.ForeignKey(SubCounty, on_delete=models.CASCADE, related_name='villages', null=True, blank=True)
+    subcounty = models.ForeignKey(SubCounty, on_delete=models.CASCADE, related_name='wards')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.subcounty.name}"
+
+    class Meta:
+        db_table = 'upg_wards'
+        verbose_name_plural = 'Wards'
+        unique_together = ['name', 'subcounty']
+
+
+class Village(models.Model):
+    """
+    Village information including ward and coverage
+    """
+    name = models.CharField(max_length=100)
+    ward = models.ForeignKey(Ward, on_delete=models.CASCADE, related_name='villages', null=True, blank=True)
+    # Keep subcounty_obj for backward compatibility during migration
+    subcounty_obj = models.ForeignKey(SubCounty, on_delete=models.CASCADE, related_name='villages_legacy', null=True, blank=True)
     saturation = models.CharField(max_length=50, blank=True)  # Coverage level
     qualified_hhs_per_village = models.IntegerField(default=0)
     country = models.CharField(max_length=50, default='Kenya')
@@ -105,14 +129,25 @@ class Village(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        if self.subcounty_obj:
-            return f"{self.name} - {self.subcounty_obj.name}"
+        if self.ward:
+            return f"{self.name} - {self.ward.name}"
         return f"{self.name}"
 
     @property
     def subcounty(self):
-        """Backward compatibility property"""
-        return self.subcounty_obj.name if self.subcounty_obj else ""
+        """Backward compatibility property - returns subcounty via ward"""
+        if self.ward:
+            return self.ward.subcounty.name
+        elif self.subcounty_obj:
+            return self.subcounty_obj.name
+        return ""
+
+    @property
+    def subcounty_obj_resolved(self):
+        """Get SubCounty object via ward or legacy field"""
+        if self.ward:
+            return self.ward.subcounty
+        return self.subcounty_obj
 
     class Meta:
         db_table = 'upg_villages'

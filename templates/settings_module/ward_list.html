@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-map-pin"></i> {{ page_title }}</h1>
+        <p class="text-muted">Manage ward data</p>
+    </div>
+    <div>
+        <a href="{% url 'settings:location_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left"></i> Back to Locations
+        </a>
+        <a href="{% url 'settings:ward_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Ward
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Search wards..." value="{{ search_query|default:'' }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="county" id="countyFilter" class="form-select" onchange="updateSubcountyFilter()">
+                    <option value="">All Counties</option>
+                    {% for county in counties %}
+                    <option value="{{ county.id }}" {% if selected_county == county.id|stringformat:"s" %}selected{% endif %}>
+                        {{ county.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="subcounty" id="subcountyFilter" class="form-select">
+                    <option value="">All Sub-Counties</option>
+                    {% for subcounty in subcounties %}
+                    <option value="{{ subcounty.id }}"
+                            data-county="{{ subcounty.county.id }}"
+                            {% if selected_subcounty == subcounty.id|stringformat:"s" %}selected{% endif %}>
+                        {{ subcounty.name }} ({{ subcounty.county.name }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                {% if search_query or selected_county or selected_subcounty %}
+                <a href="{% url 'settings:ward_list' %}" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Wards Table -->
+<div class="card">
+    <div class="card-body">
+        {% if wards %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Ward Name</th>
+                        <th>Sub-County</th>
+                        <th>County</th>
+                        <th class="text-center">Villages</th>
+                        <th>Created</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ward in wards %}
+                    <tr>
+                        <td><strong>{{ ward.name }}</strong></td>
+                        <td>
+                            <a href="{% url 'settings:ward_list' %}?subcounty={{ ward.subcounty.id }}" class="text-decoration-none">
+                                {{ ward.subcounty.name }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'settings:ward_list' %}?county={{ ward.subcounty.county.id }}" class="text-decoration-none">
+                                {{ ward.subcounty.county.name }}
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'settings:village_list' %}?ward={{ ward.id }}" class="badge bg-info text-decoration-none">
+                                {{ ward.village_count }}
+                            </a>
+                        </td>
+                        <td>{{ ward.created_at|date:"M d, Y" }}</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'settings:village_create' %}?ward={{ ward.id }}"
+                                   class="btn btn-outline-info" title="Add Village">
+                                    <i class="fas fa-plus"></i>
+                                </a>
+                                <a href="{% url 'settings:ward_edit' ward.id %}"
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger"
+                                        onclick="confirmDelete({{ ward.id }}, '{{ ward.name|escapejs }}', {{ ward.village_count }})"
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if wards.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if wards.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ wards.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_county %}&county={{ selected_county }}{% endif %}{% if selected_subcounty %}&subcounty={{ selected_subcounty }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in wards.paginator.page_range %}
+                    {% if wards.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > wards.number|add:'-3' and num < wards.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_county %}&county={{ selected_county }}{% endif %}{% if selected_subcounty %}&subcounty={{ selected_subcounty }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if wards.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ wards.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_county %}&county={{ selected_county }}{% endif %}{% if selected_subcounty %}&subcounty={{ selected_subcounty }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-map-pin fa-4x text-muted mb-3"></i>
+            <h4>No Wards Found</h4>
+            {% if search_query or selected_county or selected_subcounty %}
+            <p class="text-muted">No wards match your filter criteria.</p>
+            <a href="{% url 'settings:ward_list' %}" class="btn btn-outline-secondary">Clear Filters</a>
+            {% else %}
+            <p class="text-muted">Start by adding your first ward.</p>
+            {% endif %}
+            <a href="{% url 'settings:ward_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Ward
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the ward "<strong id="deleteItemName"></strong>"?</p>
+                <p class="text-danger mb-0" id="deleteWarning"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteItem()">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let deleteItemId = null;
+
+function updateSubcountyFilter() {
+    const countyId = document.getElementById('countyFilter').value;
+    const subcountySelect = document.getElementById('subcountyFilter');
+    const options = subcountySelect.querySelectorAll('option');
+
+    options.forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
+        } else if (!countyId || option.dataset.county === countyId) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+
+    // Reset selection if current selection is hidden
+    const selectedOption = subcountySelect.options[subcountySelect.selectedIndex];
+    if (selectedOption && selectedOption.style.display === 'none') {
+        subcountySelect.value = '';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', updateSubcountyFilter);
+
+function confirmDelete(id, name, villageCount) {
+    deleteItemId = id;
+    document.getElementById('deleteItemName').textContent = name;
+
+    if (villageCount > 0) {
+        document.getElementById('deleteWarning').textContent =
+            `This ward has ${villageCount} village(s). You must delete them first.`;
+        document.getElementById('confirmDeleteBtn').disabled = true;
+    } else {
+        document.getElementById('deleteWarning').textContent = 'This action cannot be undone.';
+        document.getElementById('confirmDeleteBtn').disabled = false;
+    }
+
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function deleteItem() {
+    if (!deleteItemId) return;
+
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
+    fetch(`/settings/locations/wards/${deleteItemId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+    });
+}
+</script>
+{% endblock %}

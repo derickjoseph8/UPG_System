@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import maintenance_views
+from . import location_views
 
 app_name = 'settings'
 
@@ -55,4 +56,36 @@ urlpatterns = [
     path('roles/<int:role_id>/edit/', views.custom_role_edit, name='custom_role_edit'),
     path('roles/<int:role_id>/delete/', views.custom_role_delete, name='custom_role_delete'),
     path('roles/<int:role_id>/detail/', views.custom_role_detail, name='custom_role_detail'),
+
+    # Location Management (Counties, SubCounties, Villages)
+    path('locations/', location_views.location_management, name='location_management'),
+
+    # County Management
+    path('locations/counties/', location_views.county_list, name='county_list'),
+    path('locations/counties/create/', location_views.county_create, name='county_create'),
+    path('locations/counties/<int:county_id>/edit/', location_views.county_edit, name='county_edit'),
+    path('locations/counties/<int:county_id>/delete/', location_views.county_delete, name='county_delete'),
+
+    # SubCounty Management
+    path('locations/subcounties/', location_views.subcounty_list, name='subcounty_list'),
+    path('locations/subcounties/create/', location_views.subcounty_create, name='subcounty_create'),
+    path('locations/subcounties/<int:subcounty_id>/edit/', location_views.subcounty_edit, name='subcounty_edit'),
+    path('locations/subcounties/<int:subcounty_id>/delete/', location_views.subcounty_delete, name='subcounty_delete'),
+
+    # Ward Management
+    path('locations/wards/', location_views.ward_list, name='ward_list'),
+    path('locations/wards/create/', location_views.ward_create, name='ward_create'),
+    path('locations/wards/<int:ward_id>/edit/', location_views.ward_edit, name='ward_edit'),
+    path('locations/wards/<int:ward_id>/delete/', location_views.ward_delete, name='ward_delete'),
+
+    # Village Management
+    path('locations/villages/', location_views.village_list, name='village_list'),
+    path('locations/villages/create/', location_views.village_create, name='village_create'),
+    path('locations/villages/<int:village_id>/edit/', location_views.village_edit, name='village_edit'),
+    path('locations/villages/<int:village_id>/delete/', location_views.village_delete, name='village_delete'),
+
+    # AJAX endpoints for dynamic dropdowns
+    path('locations/ajax/subcounties/', location_views.get_subcounties_by_county, name='ajax_subcounties'),
+    path('locations/ajax/wards/', location_views.get_wards_by_subcounty, name='ajax_wards'),
+    path('locations/ajax/villages/', location_views.get_villages_by_ward, name='ajax_villages'),
 ]

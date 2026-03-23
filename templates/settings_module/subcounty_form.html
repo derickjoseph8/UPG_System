@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-map-signs"></i> {{ page_title }}</h1>
+        <p class="text-muted">{% if form_action == 'create' %}Add a new sub-county{% else %}Update sub-county information{% endif %}</p>
+    </div>
+    <div>
+        <a href="{% url 'settings:subcounty_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Sub-Counties
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if form_action == 'create' %}
+                    <i class="fas fa-plus-circle"></i> New Sub-County
+                    {% else %}
+                    <i class="fas fa-edit"></i> Edit Sub-County
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="county" class="form-label">County <span class="text-danger">*</span></label>
+                        <select name="county" id="county" class="form-select" required>
+                            <option value="">-- Select County --</option>
+                            {% for county in counties %}
+                            <option value="{{ county.id }}"
+                                {% if subcounty and subcounty.county.id == county.id %}selected
+                                {% elif preselect_county and preselect_county == county.id|stringformat:"s" %}selected
+                                {% endif %}>
+                                {{ county.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the county this sub-county belongs to.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Sub-County Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="name" class="form-control"
+                               value="{{ subcounty.name|default:'' }}" required
+                               placeholder="Enter sub-county name (e.g., Makueni)">
+                        <div class="form-text">The name of the sub-county as it should appear in the system.</div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'settings:subcounty_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            {% if form_action == 'create' %}Create Sub-County{% else %}Update Sub-County{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle"></i> Tips</h6>
+                <ul class="small mb-0">
+                    <li>Sub-county names must be unique within a county.</li>
+                    <li>After creating a sub-county, you can add villages to it.</li>
+                    <li>Sub-counties cannot be deleted if they have villages.</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if counties.count == 0 %}
+        <div class="alert alert-warning mt-3">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>No counties available!</strong>
+            <p class="small mb-2">You need to create a county first before adding sub-counties.</p>
+            <a href="{% url 'settings:county_create' %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-plus"></i> Add County
+            </a>
+        </div>
+        {% endif %}
+
+        {% if form_action == 'edit' and subcounty %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td>Current County:</td>
+                        <td>{{ subcounty.county.name }}</td>
+                    </tr>
+                    <tr>
+                        <td>Created:</td>
+                        <td>{{ subcounty.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

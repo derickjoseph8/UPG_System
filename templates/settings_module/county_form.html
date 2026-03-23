@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-globe-africa"></i> {{ page_title }}</h1>
+        <p class="text-muted">{% if form_action == 'create' %}Add a new county{% else %}Update county information{% endif %}</p>
+    </div>
+    <div>
+        <a href="{% url 'settings:county_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Counties
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if form_action == 'create' %}
+                    <i class="fas fa-plus-circle"></i> New County
+                    {% else %}
+                    <i class="fas fa-edit"></i> Edit County
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">County Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="name" class="form-control"
+                               value="{{ county.name|default:'' }}" required
+                               placeholder="Enter county name (e.g., Makueni)">
+                        <div class="form-text">The name of the county as it should appear in the system.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="country" class="form-label">Country</label>
+                        <input type="text" name="country" id="country" class="form-control"
+                               value="{{ county.country|default:'Kenya' }}"
+                               placeholder="Enter country name">
+                        <div class="form-text">Default is Kenya.</div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'settings:county_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            {% if form_action == 'create' %}Create County{% else %}Update County{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle"></i> Tips</h6>
+                <ul class="small mb-0">
+                    <li>County names must be unique in the system.</li>
+                    <li>After creating a county, you can add sub-counties to it.</li>
+                    <li>Counties cannot be deleted if they have sub-counties.</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if form_action == 'edit' and county %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td>Created:</td>
+                        <td>{{ county.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

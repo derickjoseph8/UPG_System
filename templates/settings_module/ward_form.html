@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UPG Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-map-pin"></i> {{ page_title }}</h1>
+        <p class="text-muted">{% if form_action == 'create' %}Add a new ward{% else %}Update ward information{% endif %}</p>
+    </div>
+    <div>
+        <a href="{% url 'settings:ward_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Wards
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if form_action == 'create' %}
+                    <i class="fas fa-plus-circle"></i> New Ward
+                    {% else %}
+                    <i class="fas fa-edit"></i> Edit Ward
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="county" class="form-label">County <span class="text-danger">*</span></label>
+                            <select name="county_filter" id="county" class="form-select" onchange="filterSubcounties()">
+                                <option value="">-- Select County --</option>
+                                {% for county in counties %}
+                                <option value="{{ county.id }}"
+                                    {% if ward and ward.subcounty.county.id == county.id %}selected{% endif %}>
+                                    {{ county.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">First select a county to filter sub-counties.</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="subcounty" class="form-label">Sub-County <span class="text-danger">*</span></label>
+                            <select name="subcounty" id="subcounty" class="form-select" required>
+                                <option value="">-- Select Sub-County --</option>
+                                {% for subcounty in subcounties %}
+                                <option value="{{ subcounty.id }}"
+                                        data-county="{{ subcounty.county.id }}"
+                                        {% if ward and ward.subcounty.id == subcounty.id %}selected
+                                        {% elif preselect_subcounty and preselect_subcounty == subcounty.id|stringformat:"s" %}selected
+                                        {% endif %}>
+                                    {{ subcounty.name }} ({{ subcounty.county.name }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select the sub-county this ward belongs to.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Ward Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="name" class="form-control"
+                               value="{{ ward.name|default:'' }}" required
+                               placeholder="Enter ward name">
+                        <div class="form-text">The name of the ward as it should appear in the system.</div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'settings:ward_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            {% if form_action == 'create' %}Create Ward{% else %}Update Ward{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle"></i> Tips</h6>
+                <ul class="small mb-0">
+                    <li>Select a county first to filter the sub-county dropdown.</li>
+                    <li>Ward names must be unique within a sub-county.</li>
+                    <li>After creating a ward, you can add villages to it.</li>
+                    <li>Wards cannot be deleted if they have villages.</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if subcounties.count == 0 %}
+        <div class="alert alert-warning mt-3">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>No sub-counties available!</strong>
+            <p class="small mb-2">You need to create a sub-county first before adding wards.</p>
+            <a href="{% url 'settings:subcounty_create' %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-plus"></i> Add Sub-County
+            </a>
+        </div>
+        {% endif %}
+
+        {% if form_action == 'edit' and ward %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td>Sub-County:</td>
+                        <td>{{ ward.subcounty.name }}</td>
+                    </tr>
+                    <tr>
+                        <td>County:</td>
+                        <td>{{ ward.subcounty.county.name }}</td>
+                    </tr>
+                    <tr>
+                        <td>Created:</td>
+                        <td>{{ ward.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterSubcounties() {
+    const countyId = document.getElementById('county').value;
+    const subcountySelect = document.getElementById('subcounty');
+    const options = subcountySelect.querySelectorAll('option');
+
+    options.forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
+        } else if (!countyId || option.dataset.county === countyId) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+
+    // Reset selection if current selection is hidden
+    const selectedOption = subcountySelect.options[subcountySelect.selectedIndex];
+    if (selectedOption && selectedOption.value && selectedOption.style.display === 'none') {
+        subcountySelect.value = '';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial county selection based on selected subcounty
+    const subcountySelect = document.getElementById('subcounty');
+    const selectedSubcounty = subcountySelect.options[subcountySelect.selectedIndex];
+
+    if (selectedSubcounty && selectedSubcounty.dataset.county) {
+        document.getElementById('county').value = selectedSubcounty.dataset.county;
+    }
+
+    filterSubcounties();
+});
+</script>
+{% endblock %}
